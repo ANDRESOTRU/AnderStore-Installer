@@ -36,44 +36,23 @@ type OperationFailedUpdate = {
 
 export type OperationUpdate = OperationInfoUpdate | OperationFailedUpdate;
 
-export const installSideStoreOperation: Operation = {
+export const installAnderStoreOperation: Operation = {
   id: "install_sidestore",
-  titleKey: "operations.install_sidestore_title",
-  successTitleKey: "operations.install_sidestore_success_title",
-  successMessageKey: "operations.install_sidestore_success_message",
+  titleKey: "operations.install_anderstore_title",
+  successTitleKey: "operations.install_anderstore_success_title",
+  successMessageKey: "operations.install_anderstore_success_message",
   steps: [
     {
       id: "download",
-      titleKey: "operations.install_sidestore_step_download",
+      titleKey: "operations.install_anderstore_step_download",
     },
     {
       id: "install",
-      titleKey: "operations.install_sidestore_step_install",
+      titleKey: "operations.install_anderstore_step_install",
     },
     {
       id: "pairing",
-      titleKey: "operations.install_sidestore_step_pairing",
-    },
-  ],
-};
-
-export const installLiveContainerOperation: Operation = {
-  id: "install_sidestore",
-  titleKey: "operations.install_livecontainer_title",
-  successTitleKey: "operations.install_livecontainer_success_title",
-  successMessageKey: "operations.install_livecontainer_success_message",
-  steps: [
-    {
-      id: "download",
-      titleKey: "operations.install_livecontainer_step_download",
-    },
-    {
-      id: "install",
-      titleKey: "operations.install_livecontainer_step_install",
-    },
-    {
-      id: "pairing",
-      titleKey: "operations.install_livecontainer_step_pairing",
+      titleKey: "operations.install_anderstore_step_pairing",
     },
   ],
 };

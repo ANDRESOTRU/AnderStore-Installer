@@ -1,0 +1,58 @@
+name: "Build AnderStore Installer (Windows)"
+
+# Сборка только по запросу: Actions → Build AnderStore Installer (Windows) → Run workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add MSVC to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Perl and Make
+        run: choco install strawberryperl make --no-progress
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install frontend dependencies
+        run: bun i --frozen-lockfile
+
+      - name: Build installer
+        run: bun tauri build --bundles nsis --config src-tauri/ci.conf.json
+
+      - name: Collect installer
+        shell: bash
+        run: |
+          mkdir -p out
+          cp src-tauri/target/release/bundle/nsis/*.exe out/AnderStore-Installer-Setup.exe
+          ls -la out
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: AnderStore-Installer-Setup
+          path: out/AnderStore-Installer-Setup.exe
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: installer
+          name: AnderStore Installer (Windows)
+          body: |
+            Установщик AnderStore для Windows.
+            Сборка: ${{ github.sha }}
+          files: out/AnderStore-Installer-Setup.exe
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

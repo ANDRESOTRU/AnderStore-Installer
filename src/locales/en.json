@@ -33,18 +33,13 @@
     "devices": "Devices",
     "active_device": "Active: {{name}}",
     "select_device": "Select a device",
-    "installers": "Installers",
-    "choose_build": "Choose a build",
-    "sidestore_stable": "SideStore (Stable)",
-    "sidestore_nightly": "SideStore (Nightly)",
-    "livecontainer_sidestore_stable": "LiveContainer + SideStore (Stable)",
-    "livecontainer_sidestore_nightly": "LiveContainer + SideStore (Nightly)",
-    "import_ipa": "Import IPA",
+    "installers": "AnderStore",
+    "choose_build": "Install on iPhone",
     "settings": "Settings",
     "must_be_logged_in": "You must be logged in!",
     "must_select_device": "You must select a device!",
-    "ipa_files": "IPA Files",
-    "logo_alt": "AnderStore Installer logo"
+    "logo_alt": "AnderStore Installer logo",
+    "install_anderstore": "Install AnderStore"
   },
   "apple_id": {
     "title": "Apple ID",
@@ -102,20 +97,14 @@
     "copy_error_clipboard": "Copy error to clipboard"
   },
   "operations": {
-    "install_sidestore_title": "Installing SideStore",
-    "install_sidestore_success_title": "SideStore Installed!",
-    "install_sidestore_success_message": "Open SideStore and refresh it to complete the installation!",
-    "install_sidestore_step_download": "Download SideStore",
-    "install_sidestore_step_install": "Sign & Install SideStore",
-    "install_sidestore_step_pairing": "Place Pairing File",
-    "install_livecontainer_title": "Installing LiveContainer+SideStore",
-    "install_livecontainer_success_title": "LiveContainer+SideStore Installed!",
-    "install_livecontainer_success_message": "To complete the installation, open LiveContainer, choose settings, and click \"Import Certificate From SideStore.\" Then, choose apps, click the sidestore icon, and refresh LiveContainer.",
-    "install_livecontainer_step_download": "Download LiveContainer+SideStore",
-    "install_livecontainer_step_install": "Sign & Install LiveContainer+SideStore",
-    "install_livecontainer_step_pairing": "Place Pairing File",
     "sideload_title": "Installing App",
-    "sideload_step_install": "Sign & Install App"
+    "sideload_step_install": "Sign & Install App",
+    "install_anderstore_title": "Installing AnderStore",
+    "install_anderstore_success_title": "AnderStore installed!",
+    "install_anderstore_success_message": "Open AnderStore on your iPhone. If it does not launch, enable Developer Mode and trust the profile in Settings → General → VPN & Device Management.",
+    "install_anderstore_step_download": "Download AnderStore",
+    "install_anderstore_step_install": "Sign & install AnderStore",
+    "install_anderstore_step_pairing": "Pairing file"
   },
   "certificates": {
     "manage": "Manage Certificates",
@@ -221,7 +210,7 @@
         "Security Key 2FA is not supported. If possible, use an Apple ID with no 2FA or with trusted device 2FA."
       ],
       "download": [
-        "Download SideStore manually from ((link:https://github.com/SideStore/SideStore/releases)) and use the \"Import IPA\" button to install it."
+        "Download AnderStore.ipa manually from ((link:https://github.com/ANDRESOTRU/AnderStore/releases/tag/nightly)) and try again."
       ],
       "house_arrest": [
         "[ios::26.3]Ensure your device is not on a developer beta of iOS 26.3, as it has a bug with house arrest"
@@ -245,8 +234,12 @@
         "Ensure your device is properly connected to your computer.",
         "Unplug and reconnect the device. If the issue persists, try a different USB port and cable."
       ],
-      "not_logged_in": ["Sign in to your Apple ID first."],
-      "no_device_selected": ["Select a device before continuing."],
+      "not_logged_in": [
+        "Sign in to your Apple ID first."
+      ],
+      "no_device_selected": [
+        "Select a device before continuing."
+      ],
       "anisette": [
         "Ensure your computer is connected to the internet.",
         "Change your anisette server. Try several different servers.",
@@ -267,7 +260,7 @@
       "not_enough_app_ids": [
         "You do not have enough App IDs available to install this app.",
         "Wait for App IDs to expire after 7 days (cannot be deleted sooner), then try again.",
-        "Installing apps from SideStore sometimes allows you to use less App IDs, so try installing from there instead."
+        "Installing apps from AnderStore on the iPhone uses fewer App IDs, so try installing from there instead."
       ],
       "max_apps": [
         "You can only have 3 sideloaded apps installed at a time with a free Apple ID.",

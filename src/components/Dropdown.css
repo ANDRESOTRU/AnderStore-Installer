@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  background: #2c2c2e;
+  background: #252025;
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.65rem 0.9rem;
   border-radius: 12px;
@@ -18,7 +18,7 @@
 
 .custom-dropdown.open .dropdown-toggle {
   border-color: var(--accent-primary);
-  background: #3a3a3c;
+  background: #2f292f;
 }
 
 .dropdown-caret {
@@ -39,7 +39,7 @@
   top: calc(100% + 0.35rem);
   left: 0;
   width: 100%;
-  background: #2c2c2e;
+  background: #252025;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
@@ -79,7 +79,7 @@
 }
 
 .dropdown-option.selected {
-  background: rgba(10, 132, 255, 0.18);
+  background: rgba(205, 55, 130, 0.18);
   color: #fff;
 }
 

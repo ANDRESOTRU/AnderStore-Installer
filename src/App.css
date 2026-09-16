@@ -1,9 +1,9 @@
 :root {
   font-family:
-    "SF Pro Display",
-    "Inter",
+    "Roboto",
     -apple-system,
     BlinkMacSystemFont,
+    system-ui,
     "Segoe UI",
     sans-serif;
   font-size: 16px;
@@ -16,16 +16,19 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
-  color: #f2f2f7;
-  background-color: #0b0b0d;
+  color: #ffffff;
+  background-color: #141214;
 
-  --glass-surface: #1c1c1e;
-  --glass-surface-alt: #2c2c2e;
+  --glass-surface: #171417;
+  --glass-surface-alt: #252025;
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: #0a84ff;
-  --text-muted: #8e8e93;
-  --accent-primary: #0a84ff;
-  --accent-secondary: #007aff;
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --accent-hover: #d94f92;
+  --accent-muted: rgba(205, 55, 130, 0.16);
+  --glass-highlight: #cd3782;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --accent-primary: #cd3782;
+  --accent-secondary: #b62d73;
   --success: #30d158;
   --danger: #ff453a;
 }
@@ -49,7 +52,7 @@ textarea {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #0b0b0d;
+  background-color: #141214;
 }
 
 #root {
@@ -69,7 +72,7 @@ body {
   justify-content: space-between;
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(28, 28, 30, 0.9);
+  background: rgba(23, 20, 23, 0.92);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -109,7 +112,7 @@ body {
 
 .version-pill {
   padding: 0.65rem 1.4rem;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -127,7 +130,7 @@ body {
 
 .toolbar-button {
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 0.65rem 1.4rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 0.95rem;
@@ -184,7 +187,7 @@ body {
 
 .section-hint {
   font-size: 0.9rem;
-  color: rgba(247, 249, 255, 0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .section-hint.placeholder {
@@ -194,12 +197,12 @@ body {
 input,
 button,
 select {
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 0.78em 1rem;
   font-size: 1rem;
   font-family: inherit;
   color: inherit;
-  background: #2c2c2e;
+  background: #252025;
   border: 1px solid rgba(255, 255, 255, 0.08);
   transition:
     border-color 0.15s ease,
@@ -208,8 +211,8 @@ select {
 }
 
 select option {
-  color: #0b0b0d;
-  background: #f2f2f7;
+  color: #141214;
+  background: #ffffff;
 }
 
 select option:checked,
@@ -219,21 +222,21 @@ select option:hover {
 }
 
 input::placeholder {
-  color: rgba(242, 242, 247, 0.55);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 input:focus,
 select:focus {
   border-color: var(--accent-primary);
   outline: none;
-  background: #3a3a3c;
+  background: #2f292f;
 }
 
 button {
   cursor: pointer;
   font-weight: 600;
   letter-spacing: 0.01em;
-  background: #2c2c2e;
+  background: #252025;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: none;
 }
@@ -244,7 +247,7 @@ button:disabled {
 }
 
 button:hover:not(:disabled) {
-  background: #3a3a3c;
+  background: #2f292f;
   border-color: var(--accent-primary);
 }
 
@@ -264,7 +267,7 @@ button:active:not(:disabled) {
 .card {
   border-radius: 1.1rem;
   padding: 1rem 1.25rem;
-  background: #2c2c2e;
+  background: #252025;
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
@@ -326,7 +329,7 @@ button:active:not(:disabled) {
 
 .workspace-list-item span {
   font-size: 0.95rem;
-  color: rgba(247, 249, 255, 0.35);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .workspace-list-item:hover {
@@ -369,4 +372,24 @@ h2,
 h3,
 h4 {
   margin: 0.5rem 0;
+}
+
+/* AnderStore: main install action in ANDRESOT style */
+button.primary-install {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 0.95rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+button.primary-install:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button.primary-install:active:not(:disabled) {
+  background: var(--accent-secondary);
 }

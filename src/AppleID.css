@@ -101,7 +101,7 @@
 .action-button {
   flex: 1;
   min-width: 130px;
-  border-radius: 14px;
+  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

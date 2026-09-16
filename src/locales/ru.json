@@ -33,18 +33,13 @@
     "devices": "Устройства",
     "active_device": "Выбрано: {{name}}",
     "select_device": "Выберите устройство",
-    "installers": "Установщики",
-    "choose_build": "Выберите сборку",
-    "sidestore_stable": "SideStore (Стабильная)",
-    "sidestore_nightly": "SideStore (Предварительная)",
-    "livecontainer_sidestore_stable": "LiveContainer + SideStore (Стабильная)",
-    "livecontainer_sidestore_nightly": "LiveContainer + SideStore (Предварительная)",
-    "import_ipa": "Импорт IPA",
+    "installers": "AnderStore",
+    "choose_build": "Установка на iPhone",
     "settings": "Настройки",
     "must_be_logged_in": "Необходимо выполнить вход!",
     "must_select_device": "Выберите устройство!",
-    "ipa_files": "Файлы IPA",
-    "logo_alt": "Логотип AnderStore Installer"
+    "logo_alt": "Логотип AnderStore Installer",
+    "install_anderstore": "Установить AnderStore"
   },
   "apple_id": {
     "title": "Apple ID",
@@ -102,20 +97,14 @@
     "copy_error_clipboard": "Скопировать ошибку в буфер обмена"
   },
   "operations": {
-    "install_sidestore_title": "Установка SideStore",
-    "install_sidestore_success_title": "SideStore установлен!",
-    "install_sidestore_success_message": "Откройте SideStore и обновите его для завершения установки!",
-    "install_sidestore_step_download": "Скачайте SideStore",
-    "install_sidestore_step_install": "Подпишите и установите SideStore",
-    "install_sidestore_step_pairing": "Выберите файл сопряжения",
-    "install_livecontainer_title": "Установка LiveContainer+SideStore",
-    "install_livecontainer_success_title": "LiveContainer+SideStore установлены!",
-    "install_livecontainer_success_message": "Для продолжения установки откройте LiveContainer, зайдите в настройки и выберите \"Import Certificate From SideStore.\" Затем выберите приложения, нажмите на иконку SideStore и обновите LiveContainer.",
-    "install_livecontainer_step_download": "Скачайте LiveContainer+SideStore",
-    "install_livecontainer_step_install": "Подпишите и установите LiveContainer+SideStore",
-    "install_livecontainer_step_pairing": "Выберите файл сопряжения",
     "sideload_title": "Установка приложения",
-    "sideload_step_install": "Подпишите и установите приложение"
+    "sideload_step_install": "Подпишите и установите приложение",
+    "install_anderstore_title": "Установка AnderStore",
+    "install_anderstore_success_title": "AnderStore установлен!",
+    "install_anderstore_success_message": "Откройте AnderStore на iPhone. Если приложение не запускается, включите Режим разработчика и доверьте профиль в «Настройки → Основные → VPN и управление устройством».",
+    "install_anderstore_step_download": "Скачивание AnderStore",
+    "install_anderstore_step_install": "Подпись и установка AnderStore",
+    "install_anderstore_step_pairing": "Файл сопряжения"
   },
   "certificates": {
     "manage": "Управлять сертификатами",
@@ -221,7 +210,7 @@
         "Двухфакторная аутентификация через ключи безопасности (Security Key) не поддерживается. Используйте Apple ID без 2FA или с подтверждением через доверенное устройство."
       ],
       "download": [
-        "Скачайте SideStore вручную с ((link:https://github.com/SideStore/SideStore/releases)) и используйте кнопку \"Import IPA\" для установки."
+        "Скачайте AnderStore.ipa вручную с ((link:https://github.com/ANDRESOTRU/AnderStore/releases/tag/nightly)) и повторите установку."
       ],
       "house_arrest": [
         "[ios::26.3] Убедитесь, что на устройстве не установлена бета-версия iOS 26.3, так как в ней есть баг с house arrest."
@@ -245,8 +234,12 @@
         "Убедитесь, что устройство правильно подключено к компьютеру.",
         "Отключите и снова подключите устройство. Если проблема осталась, попробуйте другой USB-порт или кабель."
       ],
-      "not_logged_in": ["Сначала войдите в свой Apple ID."],
-      "no_device_selected": ["Выберите устройство, прежде чем продолжить."],
+      "not_logged_in": [
+        "Сначала войдите в свой Apple ID."
+      ],
+      "no_device_selected": [
+        "Выберите устройство, прежде чем продолжить."
+      ],
       "anisette": [
         "Убедитесь, что компьютер подключен к интернету.",
         "Смените сервер Anisette. Попробуйте несколько разных серверов.",
@@ -267,7 +260,7 @@
       "not_enough_app_ids": [
         "У вас недостаточно свободных App ID для установки этого приложения.",
         "Подождите 7 дней, пока истечет срок действия старых App ID (их нельзя удалить раньше), и попробуйте снова.",
-        "Установка через SideStore иногда позволяет использовать меньше App ID, попробуйте этот способ."
+        "Установка приложений через AnderStore на iPhone расходует меньше App ID — попробуйте этот способ."
       ],
       "max_apps": [
         "С бесплатным Apple ID можно установить не более 3 сторонних приложений одновременно.",

@@ -22,17 +22,7 @@ type SettingsProps = {
   checkKeyring: () => Promise<void>;
 };
 
-let anisetteServers = [
-  ["anisette.andresot.uk", "AnderStore"],
-  ["ani.sidestore.io", "SideStore (.io)"],
-  ["ani.stikstore.app", "StikStore"],
-  ["ani.sidestore.app", "SideStore (.app)"],
-  ["ani.sidestore.zip", "SideStore (.zip)"],
-  ["ani.846969.xyz", "SideStore (.xyz)"],
-  ["ani.neoarz.xyz", "neoarz"],
-  ["ani.xu30.top", "SteX"],
-  ["anisette.wedotstud.io", "WE. Studio"],
-];
+let anisetteServers = [["anisette.andresot.uk", "AnderStore"]];
 export const Settings = ({
   ensureSelectedDevice,
   setSelectedDevice,

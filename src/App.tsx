@@ -3,12 +3,9 @@ import "./App.css";
 import { AppleID } from "./AppleID";
 import { Device, DeviceInfo } from "./Device";
 import { invoke } from "@tauri-apps/api/core";
-import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  sideloadOperation,
-  installSideStoreOperation,
-  installLiveContainerOperation,
+  installAnderStoreOperation,
   Operation,
   OperationState,
   OperationUpdate,
@@ -306,51 +303,10 @@ function App() {
             <GlassCard className="panel">
               <div className="action-row single-row">
                 <button
+                  className="primary-install"
                   onClick={() => {
                     if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    startOperation(installSideStoreOperation, {
-                      nightly: false,
-                      liveContainer: false,
-                    }).catch((e) => {
-                      console.log(e.type);
-                      console.error(e.message);
-                    });
-                  }}
-                >
-                  {t("app.sidestore_stable")}
-                </button>
-                <button
-                  onClick={() => {
-                    if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    startOperation(installSideStoreOperation, {
-                      nightly: true,
-                      liveContainer: false,
-                    }).catch((e) => {
-                      console.log(e.type);
-                      console.error(e.message);
-                    });
-                  }}
-                >
-                  {t("app.sidestore_nightly")}
-                </button>
-                <button
-                  onClick={() => {
-                    if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    startOperation(installLiveContainerOperation, {
-                      nightly: false,
-                      liveContainer: true,
-                    }).catch((e) => {
-                      console.log(e.type);
-                      console.error(e.message);
-                    });
-                  }}
-                >
-                  {t("app.livecontainer_sidestore_stable")}
-                </button>
-                <button
-                  onClick={() => {
-                    if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    startOperation(installLiveContainerOperation, {
+                    startOperation(installAnderStoreOperation, {
                       nightly: true,
                       liveContainer: true,
                     }).catch((e) => {
@@ -359,27 +315,7 @@ function App() {
                     });
                   }}
                 >
-                  {t("app.livecontainer_sidestore_nightly")}
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    let path = await openFileDialog({
-                      multiple: false,
-                      filters: [
-                        { name: t("app.ipa_files"), extensions: ["ipa"] },
-                      ],
-                    });
-                    if (!path) return;
-                    startOperation(sideloadOperation, {
-                      appPath: path as string,
-                    }).catch((e) => {
-                      console.log(e.type);
-                      console.error(e.message);
-                    });
-                  }}
-                >
-                  {t("app.import_ipa")}
+                  {t("app.install_anderstore")}
                 </button>
               </div>
             </GlassCard>

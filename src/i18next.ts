@@ -3,33 +3,8 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 const languages = [
-  ["az", "Azərbaycan"],
-  ["en", "English"],
-  ["el", "Ελληνικά"],
-  ["am", "Հայերեն"],
-  ["es", "Español"],
-  ["it", "Italiano"],
-  ["de", "Deutsch"],
-  ["de_ch", "Schweizerdeutsch"],
-  ["fr", "Français"],
-  ["pl", "Polski"],
-  ["nl", "Nederlands"],
-  ["vi", "Tiếng Việt"],
   ["ru", "Русский"],
-  ["ro", "Română"],
-  ["ar", "العربية"],
-  ["tr", "Türkçe"],
-  ["zh_tw", "Traditional Chinese （繁體中文)"],
-  ["zh_cn", "Simpified Chinese （简体中文)"],
-  ["ko", "한국어"],
-  ["zh_hk", "Cantonese （粵語)"],
-  ["ja", "日本語"],
-  ["cs_cz", "Čeština"],
-  ["sv", "Svenska"],
-  ["hu", "Magyar"],
-  ["kh", "ភាសាខ្មែរ"],
-  ["id", "Bahasa Indonesia"],
-  ["pt_br", "Português (Brasileiro)"]
+  ["en", "English"],
 ] as const;
 
 export const sortedLanguages = [...languages].sort((a, b) =>
@@ -58,7 +33,7 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: "en",
+    fallbackLng: "ru",
     interpolation: {
       escapeValue: false,
     },

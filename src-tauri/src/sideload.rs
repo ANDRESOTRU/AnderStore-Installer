@@ -99,29 +99,12 @@ pub async fn install_sidestore_operation(
     let op = Operation::new("install_sidestore".to_string(), &window);
     op.start("download")?;
     // TODO: Cache & check version to avoid re-downloading
-    let (filename, url) = if live_container {
-        if nightly {
-            (
-                "AnderStore-Nightly.ipa",
-                "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/LiveContainer+SideStore.ipa",
-            )
-        } else {
-            (
-                "AnderStore.ipa",
-                "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/LiveContainer+SideStore.ipa",
-            )
-        }
-    } else if nightly {
-        (
-            "SideStore-Nightly.ipa",
-            "https://github.com/SideStore/SideStore/releases/download/nightly/SideStore.ipa",
-        )
-    } else {
-        (
-            "SideStore.ipa",
-            "https://github.com/SideStore/SideStore/releases/latest/download/SideStore.ipa",
-        )
-    };
+    // AnderStore: single build, always the latest nightly release
+    let _ = (nightly, live_container);
+    let (filename, url) = (
+        "AnderStore.ipa",
+        "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/AnderStore.ipa",
+    );
 
     let dest = handle
         .path()
