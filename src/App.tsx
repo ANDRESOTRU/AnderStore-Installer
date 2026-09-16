@@ -185,7 +185,7 @@ function App() {
           <div className="title-block">
             <img src={logo} alt={t("app.logo_alt")} className="logo" />
             <div>
-              <h1 className="title">iloader</h1>
+              <h1 className="title">AnderStore Installer</h1>
               <p className="subtitle">{t("subtitle")}</p>
             </div>
           </div>
@@ -198,7 +198,7 @@ function App() {
             className="toolbar-button"
             onClick={async () => {
               try {
-                await openUrl("https://github.com/nab138/iloader");
+                await openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer");
               } catch (error) {
                 console.error("Failed to open GitHub link", error);
                 toast.error(t("app.open_github_failed"));

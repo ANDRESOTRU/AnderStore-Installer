@@ -1,4 +1,4 @@
-name: "Build iloader"
+name: "Build AnderStore Installer"
 
 on:
   push:

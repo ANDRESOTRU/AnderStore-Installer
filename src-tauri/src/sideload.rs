@@ -102,13 +102,13 @@ pub async fn install_sidestore_operation(
     let (filename, url) = if live_container {
         if nightly {
             (
-                "LiveContainerSideStore-Nightly.ipa",
-                "https://github.com/LiveContainer/LiveContainer/releases/download/nightly/LiveContainer+SideStore.ipa",
+                "AnderStore-Nightly.ipa",
+                "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/LiveContainer+SideStore.ipa",
             )
         } else {
             (
-                "LiveContainerSideStore.ipa",
-                "https://github.com/LiveContainer/LiveContainer/releases/latest/download/LiveContainer+SideStore.ipa",
+                "AnderStore.ipa",
+                "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/LiveContainer+SideStore.ipa",
             )
         }
     } else if nightly {

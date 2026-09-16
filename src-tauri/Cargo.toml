@@ -1,8 +1,8 @@
 [package]
 name = "iloader"
 version = "2.3.3"
-description = "User-friendly sideloader"
-authors = ["nab138"]
+description = "AnderStore Installer (fork of iloader)"
+authors = ["nab138", "ANDRESOTRU"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

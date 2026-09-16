@@ -34,7 +34,7 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [anisetteServer] = useStore<string>(
     "anisetteServer",
-    "ani.sidestore.io",
+    "anisette.andresot.uk",
   );
   const { platform } = usePlatform();
 
@@ -167,7 +167,7 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
                     github: (
                       <span
                         onClick={() =>
-                          openUrl("https://github.com/nab138/iloader/issues")
+                          openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer/issues")
                         }
                         role="link"
                         className="error-link"

@@ -33,7 +33,7 @@ export default ({
   const [moreDetailsOpen, setMoreDetailsOpen] = useState(false);
   const [anisetteServer] = useStore<string>(
     "anisetteServer",
-    "ani.sidestore.io",
+    "anisette.andresot.uk",
   );
   const { platform } = usePlatform();
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -211,7 +211,7 @@ export default ({
                   github: (
                     <span
                       onClick={() =>
-                        openUrl("https://github.com/nab138/iloader/issues")
+                        openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer/issues")
                       }
                       role="link"
                       className="error-link"

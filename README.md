@@ -1,3 +1,14 @@
+# AnderStore Installer
+
+Установщик AnderStore для Windows, macOS и Linux. Это форк [iloader](https://github.com/nab138/iloader) (https://iloader.app) от nab138; проект не является официальным и не одобрен автором iloader.
+
+- Anisette по умолчанию: `anisette.andresot.uk`
+- «Install LiveContainer + SideStore» ставит AnderStore из https://github.com/ANDRESOTRU/AnderStore/releases/tag/nightly
+
+Код распространяется по MIT License (см. LICENSE, Copyright nab138). Брендинг iloader — см. LICENSE-BRANDING.
+
+---
+
 <a href="https://iloader.app">
   <picture align="left" >
     <source media="(prefers-color-scheme: dark)" srcset="/iloader.svg">

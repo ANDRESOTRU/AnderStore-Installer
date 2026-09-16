@@ -23,6 +23,7 @@ type SettingsProps = {
 };
 
 let anisetteServers = [
+  ["anisette.andresot.uk", "AnderStore"],
   ["ani.sidestore.io", "SideStore (.io)"],
   ["ani.stikstore.app", "StikStore"],
   ["ani.sidestore.app", "SideStore (.app)"],
