@@ -33,7 +33,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis"
+    ],
     "createUpdaterArtifacts": false,
     "category": "Utility",
     "icon": [
