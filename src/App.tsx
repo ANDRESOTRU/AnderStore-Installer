@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
-import { AppleID } from "./AppleID";
-import { Device, DeviceInfo } from "./Device";
+import { DeviceInfo } from "./Device";
+import { HELP_URL, Wizard } from "./Wizard";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
@@ -195,37 +195,37 @@ function App() {
             className="toolbar-button"
             onClick={async () => {
               try {
-                await openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer");
+                await openUrl(HELP_URL);
               } catch (error) {
                 console.error("Failed to open GitHub link", error);
                 toast.error(t("app.open_github_failed"));
               }
             }}
           >
-            {t("app.github")}
+            {t("wizard.help")}
           </button>
         </div>
       </header>
-      <div className="workspace-body">
-        <aside className="workspace-sidebar">
-          <section className="workspace-section">
-            <div className="section-header">
-              <p className="section-label">{t("app.section_account")}</p>
-              {/* here to ensure spacing and stuff is correct */}
-              <span className="section-hint placeholder" aria-hidden="true">
-                Placeholder
-              </span>
-            </div>
-            <GlassCard className="panel">
-              <AppleID
-                loggedInAs={loggedInAs}
-                setLoggedInAs={setLoggedInAs}
-                noKeyringAvailable={noKeyringAvailable}
-              />
-            </GlassCard>
-          </section>
-          <section className="workspace-section">
-            <p className="section-label">{t("app.section_management")}</p>
+      <div className="workspace-body wizard-layout">
+        <Wizard
+          loggedInAs={loggedInAs}
+          setLoggedInAs={setLoggedInAs}
+          noKeyringAvailable={noKeyringAvailable}
+          selectedDevice={selectedDevice}
+          setSelectedDevice={setSelectedDevice}
+          registerRefresh={(fn) => {
+            refreshDevicesRef.current = fn ?? null;
+          }}
+          install={() =>
+            startOperation(installAnderStoreOperation, {
+              nightly: true,
+              liveContainer: true,
+            })
+          }
+        />
+        <details className="advanced">
+          <summary>{t("wizard.advanced")}</summary>
+          <div className="advanced-content">
             <div className="workspace-list">
               <button
                 className="workspace-list-item"
@@ -236,15 +236,6 @@ function App() {
               >
                 {t("app.manage_pairing_file")}{" "}
                 <span aria-hidden="true">{shortcutLabel("⌘P", "Ctrl+P")}</span>
-              </button>
-              <button
-                className="workspace-list-item"
-                onClick={() => {
-                  refreshDevicesRef.current?.();
-                }}
-              >
-                {t("app.refresh_devices")}{" "}
-                <span aria-hidden="true">{shortcutLabel("⌘R", "Ctrl+R")}</span>
               </button>
               <button
                 className="workspace-list-item"
@@ -271,57 +262,6 @@ function App() {
                 </span>
               </button>
             </div>
-          </section>
-        </aside>
-        <section className="workspace-content">
-          <section className="workspace-section">
-            <div className="section-header">
-              <p className="section-label">{t("app.devices")}</p>
-              <span className="section-hint">
-                {selectedDevice
-                  ? t("app.active_device", {
-                      name: `${selectedDevice.name} (${selectedDevice.version})`,
-                    })
-                  : t("app.select_device")}
-              </span>
-            </div>
-            <GlassCard className="panel">
-              <Device
-                selectedDevice={selectedDevice}
-                setSelectedDevice={setSelectedDevice}
-                registerRefresh={(fn) => {
-                  refreshDevicesRef.current = fn ?? null;
-                }}
-              />
-            </GlassCard>
-          </section>
-          <section className="workspace-section">
-            <div className="section-header">
-              <p className="section-label">{t("app.installers")}</p>
-              <span className="section-hint">{t("app.choose_build")}</span>
-            </div>
-            <GlassCard className="panel">
-              <div className="action-row single-row">
-                <button
-                  className="primary-install"
-                  onClick={() => {
-                    if (!ensuredLoggedIn() || !ensureSelectedDevice()) return;
-                    startOperation(installAnderStoreOperation, {
-                      nightly: true,
-                      liveContainer: true,
-                    }).catch((e) => {
-                      console.log(e.type);
-                      console.error(e.message);
-                    });
-                  }}
-                >
-                  {t("app.install_anderstore")}
-                </button>
-              </div>
-            </GlassCard>
-          </section>
-          <section className="workspace-section">
-            <p className="section-label">{t("app.settings")}</p>
             <GlassCard className="panel settings-panel">
               <Settings
                 ensureSelectedDevice={ensureSelectedDevice}
@@ -331,14 +271,14 @@ function App() {
                 checkKeyring={checkKeyring}
               />
             </GlassCard>
-          </section>
-          {operationState && (
-            <OperationView
-              operationState={operationState}
-              closeMenu={() => setOperationState(null)}
-            />
-          )}
-        </section>
+          </div>
+        </details>
+        {operationState && (
+          <OperationView
+            operationState={operationState}
+            closeMenu={() => setOperationState(null)}
+          />
+        )}
       </div>
       <Modal
         isOpen={openModal === "certificates"}

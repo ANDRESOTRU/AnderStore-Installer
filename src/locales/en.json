@@ -1,5 +1,5 @@
 {
-  "subtitle": "Sideloading Companion",
+  "subtitle": "Install AnderStore on your iPhone",
   "version": "Version",
   "common": {
     "confirm": "Confirm",
@@ -77,7 +77,7 @@
     "no_keyring_available": "Unable to save credentials on this device."
   },
   "device": {
-    "title": "iDevice",
+    "title": "iPhone",
     "loading_devices": "Loading devices...",
     "no_devices_found": "No devices found",
     "found_device": "Found device",
@@ -241,15 +241,15 @@
         "Select a device before continuing."
       ],
       "anisette": [
-        "Ensure your computer is connected to the internet.",
-        "Change your anisette server. Try several different servers.",
-        "Make sure you can access ((link:{{anisetteServerUrl}})) in a browser."
+        "Make sure this computer is connected to the internet.",
+        "Try again in a minute — the sign-in server may be temporarily unavailable.",
+        "Check that ((link:{{anisetteServerUrl}})) opens in your browser."
       ],
       "keyring": [
         "Try enabling \"Don't use keyring\" in settings to bypass this issue. Note that this is less secure."
       ],
       "misc": [
-        "Try again. Restarting the app, your computer, and/or your phone may also help."
+        "Click the button again. If it doesn't help, restart the app and reconnect the iPhone."
       ],
       "admin": [
         "Try running the app with elevated permissions (as administrator/root)."
@@ -268,12 +268,77 @@
         "Expired apps still count towards the 3 app limit."
       ]
     },
-    "support_message": "If the issue persists, press \"Copy to clipboard\" and send the copied error to the <discord>Discord</discord> or a <github>GitHub issue</github> for support."
+    "support_message": "If the error keeps happening, click “Copy to clipboard” and open the <github>help page</github>."
   },
   "update": {
     "new_version_available": "A new version is available: {{version}}. Do you want to update?",
     "updating": "Updating...",
     "downloaded_restarting": "Update downloaded! Restarting app...",
     "failed_download": "Failed to download update: {{error}}"
+  },
+  "wizard": {
+    "progress": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "back": "Back",
+    "help": "Help",
+    "check_again": "Check again",
+    "advanced": "Advanced",
+    "prepare": {
+      "short": "Computer",
+      "title": "Prepare your computer",
+      "lead": "Let's check that this computer can talk to your iPhone. You only do this once.",
+      "checking": "Checking…",
+      "ok": "All set, the computer can see Apple devices.",
+      "missing": "Apple's iPhone software is missing.",
+      "missing_step1": "Click “Download iTunes” — Microsoft Store will open.",
+      "missing_step2": "Install iTunes and open it once.",
+      "missing_step3": "Come back and click “Check again”.",
+      "download_itunes": "Download iTunes",
+      "waiting": "Install iTunes first, then click “Check again”."
+    },
+    "connect": {
+      "short": "iPhone",
+      "title": "Connect your iPhone",
+      "lead": "Plug your iPhone into this computer with a cable.",
+      "step1": "Connect the iPhone with a cable and unlock it.",
+      "step2": "If the iPhone asks “Trust This Computer?” — tap “Trust” and enter your passcode.",
+      "step3": "Click your iPhone in the list below. Not there? Click “Refresh”.",
+      "waiting": "Select your iPhone in the list to continue."
+    },
+    "account": {
+      "short": "Apple ID",
+      "title": "Sign in with Apple ID",
+      "lead": "An Apple ID is needed to sign AnderStore for your iPhone for free.",
+      "note_free": "A regular free Apple ID works. A separate one is recommended.",
+      "note_privacy": "Your email and password are only sent to Apple.",
+      "note_code": "Apple will send a 6-digit code to your iPhone or Mac — enter it here.",
+      "waiting": "Sign in to continue."
+    },
+    "install": {
+      "short": "Install",
+      "title": "Install AnderStore",
+      "lead": "Click the button and wait 1–3 minutes. Keep the iPhone connected.",
+      "note_device": "Installing on: {{name}}",
+      "note_cable": "Don't unplug or lock the iPhone until it finishes.",
+      "installing": "Installing… keep the iPhone connected",
+      "failed": "Installation failed. Follow the tip in the error window and click the button again."
+    },
+    "finish": {
+      "short": "Done",
+      "title": "4 last steps on your iPhone",
+      "lead": "AnderStore is on your iPhone. To open it, do this on the phone:",
+      "installed": "AnderStore is installed!",
+      "devmode_title": "1. Turn on Developer Mode",
+      "devmode_path": "Settings → Privacy & Security → Developer Mode → On. The iPhone restarts, then tap “Turn On”.",
+      "trust_title": "2. Allow the app",
+      "trust_path": "Settings → General → VPN & Device Management → your Apple ID → “Trust”.",
+      "vpn_title": "3. Install LocalDevVPN",
+      "vpn_path": "Find the free LocalDevVPN app in the App Store and install it. AnderStore uses it to renew its signature.",
+      "vpn_open": "Step-by-step with pictures",
+      "open_title": "4. Open AnderStore",
+      "open_path": "Find the AnderStore icon on your Home Screen and open it.",
+      "weekly": "Important: every 7 days open AnderStore and tap “Refresh”, or your apps will stop opening. AnderStore will remind you.",
+      "again": "Install on another iPhone"
+    }
   }
 }

@@ -159,7 +159,7 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
                   components={{
                     discord: (
                       <span
-                        onClick={() => openUrl("https://discord.gg/EA6yVgydBz")}
+                        onClick={() => openUrl("https://store.andresot.uk/help")}
                         role="link"
                         className="error-link"
                       />
@@ -167,7 +167,7 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
                     github: (
                       <span
                         onClick={() =>
-                          openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer/issues")
+                          openUrl("https://store.andresot.uk/help")
                         }
                         role="link"
                         className="error-link"
