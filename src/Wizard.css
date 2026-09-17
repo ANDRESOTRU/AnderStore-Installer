@@ -212,3 +212,9 @@ button.link-button:hover:not(:disabled) {
   overflow-y: auto;
   padding-bottom: 2rem;
 }
+
+.about-panel .muted-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0.4rem 0;
+}

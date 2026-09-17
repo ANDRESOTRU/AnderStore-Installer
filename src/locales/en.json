@@ -340,5 +340,11 @@
       "weekly": "Important: every 7 days open AnderStore and tap “Refresh”, or your apps will stop opening. AnderStore will remind you.",
       "again": "Install on another iPhone"
     }
+  },
+  "about": {
+    "title": "About",
+    "source": "Source code on GitHub",
+    "licenses": "Licenses",
+    "licensesDesc": "AnderStore Installer is MIT-licensed and based on the open-source project iloader (© nab138)."
   }
 }

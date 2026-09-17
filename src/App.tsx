@@ -262,6 +262,27 @@ function App() {
                 </span>
               </button>
             </div>
+            <GlassCard className="panel about-panel">
+              <h3 style={{ marginTop: 0 }}>{t("about.title")}</h3>
+              <p className="muted-text">
+                AnderStore Installer · ANDRESOT · {t("version")} {version}
+              </p>
+              <div className="workspace-list">
+                <button className="workspace-list-item" onClick={() => openUrl("https://andresot.ru")}>
+                  andresot.ru
+                </button>
+                <button
+                  className="workspace-list-item"
+                  onClick={() => openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer")}
+                >
+                  {t("about.source")}
+                </button>
+                <button className="workspace-list-item" onClick={() => openUrl("https://github.com/nab138/iloader")}>
+                  {t("about.licenses")}
+                </button>
+              </div>
+              <p className="muted-text">{t("about.licensesDesc")}</p>
+            </GlassCard>
             <GlassCard className="panel settings-panel">
               <Settings
                 ensureSelectedDevice={ensureSelectedDevice}
