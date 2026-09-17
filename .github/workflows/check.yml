@@ -1,0 +1,45 @@
+name: "Check (no packaging)"
+
+# Быстрая проверка кода при каждом push. Установщик НЕ собирается и не публикуется —
+# полная сборка запускается вручную в workflow "Build AnderStore Installer (Windows)".
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: TypeScript and build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun i --frozen-lockfile
+      - name: Type check
+        run: bunx tsc --noEmit
+      - name: Build frontend
+        run: bunx vite build
+
+  rust:
+    name: Rust check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install Perl and Make
+        run: choco install strawberryperl make --no-progress
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun i --frozen-lockfile
+      - name: Build frontend (needed by tauri config)
+        run: bunx vite build
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: cargo check
+        working-directory: src-tauri
+        run: cargo check --locked
