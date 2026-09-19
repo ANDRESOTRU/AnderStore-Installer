@@ -205,6 +205,7 @@
         "Visit ((link:https://iforgot.apple.com/)) to unlock your account."
       ],
       "auth": [
+        "If you see 429 or \"Too Many Requests\", Apple has temporarily limited sign-ins. Wait 30-60 minutes and try once.",
         "Make sure your credentials are correct and try again, even if they were correct.",
         "If the issue persists, try using another Apple ID.",
         "Security Key 2FA is not supported. If possible, use an Apple ID with no 2FA or with trusted device 2FA."

@@ -89,6 +89,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "anderstore-installer"
+version = "2.3.3"
+dependencies = [
+ "chrono",
+ "futures",
+ "idevice",
+ "isideload",
+ "keyring",
+ "once_cell",
+ "plist",
+ "plist-macro",
+ "reqwest",
+ "rootcause",
+ "rustls",
+ "serde",
+ "serde_json",
+ "strum",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2614,39 +2647,6 @@ checksum = "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
-]
-
-[[package]]
-name = "iloader"
-version = "2.3.3"
-dependencies = [
- "chrono",
- "futures",
- "idevice",
- "isideload",
- "keyring",
- "once_cell",
- "plist",
- "plist-macro",
- "reqwest",
- "rootcause",
- "rustls",
- "serde",
- "serde_json",
- "strum",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "thiserror 2.0.20",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]
