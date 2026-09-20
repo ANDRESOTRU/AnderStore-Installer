@@ -88,6 +88,21 @@ fn store_pairing_path(name: &str, live_container: bool) -> Option<&'static str> 
     }
 }
 
+fn pairing_parent_directories(path: &str) -> Vec<String> {
+    let components: Vec<_> = path
+        .split('/')
+        .filter(|component| !component.is_empty())
+        .collect();
+    let mut current = String::from("/Documents");
+    let mut directories = Vec::new();
+    for component in components.iter().take(components.len().saturating_sub(1)) {
+        current.push('/');
+        current.push_str(component);
+        directories.push(current.clone());
+    }
+    directories
+}
+
 async fn generate_lockdown_plist(
     device: &DeviceInfo,
     provider: &dyn IdeviceProvider,
@@ -205,21 +220,23 @@ pub async fn place_file(
         .await
         .map_err(|e| AppError::HouseArrest("Failed to vend documents".into(), e.to_string()))?;
 
-    afc_client
-        .mk_dir(format!(
-            "/Documents/{}",
-            path.rsplit_once('/').map(|x| x.0).unwrap_or("")
-        ))
-        .await
-        .map_err(|e| {
-            AppError::HouseArrest("Failed to create Documents directory".into(), e.to_string())
-        })?;
+    // A fresh LiveContainer data container does not have SideStore/Documents yet. AFC's
+    // MakeDir is not recursive, so creating the full nested path in one call can appear to
+    // succeed on some devices while leaving no usable pairing file for Core.
+    for directory in pairing_parent_directories(&path) {
+        if afc_client.get_file_info(directory.clone()).await.is_err() {
+            afc_client.mk_dir(directory.clone()).await.map_err(|e| {
+                AppError::HouseArrest(
+                    format!("Failed to create pairing directory {directory}"),
+                    e.to_string(),
+                )
+            })?;
+        }
+    }
 
+    let device_path = format!("/Documents/{}", path);
     let mut file = afc_client
-        .open(
-            format!("/Documents/{}", path),
-            idevice::afc::opcode::AfcFopenMode::Wr,
-        )
+        .open(device_path.clone(), idevice::afc::opcode::AfcFopenMode::Wr)
         .await
         .map_err(|e| {
             AppError::HouseArrest("Failed to open file on device".into(), e.to_string())
@@ -231,6 +248,28 @@ pub async fn place_file(
     file.close()
         .await
         .map_err(|e| AppError::HouseArrest("Failed to close file".into(), e.to_string()))?;
+
+    let mut written_file = afc_client
+        .open(device_path, idevice::afc::opcode::AfcFopenMode::RdOnly)
+        .await
+        .map_err(|e| {
+            AppError::HouseArrest("Failed to verify pairing file".into(), e.to_string())
+        })?;
+    let written = written_file.read_entire().await.map_err(|e| {
+        AppError::HouseArrest("Failed to read pairing file back".into(), e.to_string())
+    })?;
+    written_file.close().await.map_err(|e| {
+        AppError::HouseArrest(
+            "Failed to close verified pairing file".into(),
+            e.to_string(),
+        )
+    })?;
+    if written != pairing {
+        return Err(AppError::HouseArrest(
+            "Pairing file verification failed".into(),
+            "The bytes read from the iPhone differ from the generated pairing file".into(),
+        ));
+    }
 
     Ok(())
 }
@@ -597,6 +636,15 @@ mod tests {
 
         assert_eq!(app_display_name(&fallback), Some("AnderStore"));
         assert_eq!(app_display_name(&unnamed), None);
+    }
+
+    #[test]
+    fn creates_nested_pairing_directories_in_order() {
+        assert_eq!(
+            pairing_parent_directories("SideStore/Documents/ALTPairingFile.mobiledevicepairing"),
+            vec!["/Documents/SideStore", "/Documents/SideStore/Documents"]
+        );
+        assert!(pairing_parent_directories("ALTPairingFile.mobiledevicepairing").is_empty());
     }
 }
 
