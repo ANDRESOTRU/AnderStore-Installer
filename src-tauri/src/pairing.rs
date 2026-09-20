@@ -39,6 +39,10 @@ static PAIRING_STORAGE: OnceLock<Mutex<PairingStorageEntry>> = OnceLock::new();
 const PAIRING_APPS: &[(&str, &str)] = &[
     ("SideStore", "ALTPairingFile.mobiledevicepairing"),
     (
+        "AnderStore",
+        "SideStore/Documents/ALTPairingFile.mobiledevicepairing",
+    ),
+    (
         "LiveContainer",
         "SideStore/Documents/ALTPairingFile.mobiledevicepairing",
     ),
@@ -60,6 +64,28 @@ pub struct PairingAppInfo {
     pub name: String,
     pub bundle_id: String,
     pub path: String,
+}
+
+fn app_display_name(app: &plist::Value) -> Option<&str> {
+    let dictionary = app.as_dictionary()?;
+    dictionary
+        .get("CFBundleDisplayName")
+        .and_then(|value| value.as_string())
+        .or_else(|| {
+            dictionary
+                .get("CFBundleName")
+                .and_then(|value| value.as_string())
+        })
+}
+
+fn store_pairing_path(name: &str, live_container: bool) -> Option<&'static str> {
+    match name {
+        "SideStore" => Some("ALTPairingFile.mobiledevicepairing"),
+        "AnderStore" | "LiveContainer" if live_container => {
+            Some("SideStore/Documents/ALTPairingFile.mobiledevicepairing")
+        }
+        _ => None,
+    }
 }
 
 async fn generate_lockdown_plist(
@@ -470,10 +496,9 @@ pub async fn installed_pairing_apps(
 
     let mut installed = HashMap::new();
     for (bundle_id, app) in installed_apps {
-        let n = app
-            .as_dictionary()
-            .and_then(|x| x.get("CFBundleDisplayName").and_then(|x| x.as_string()))
-            .ok_or(AppError::Misc("Failed to parse installed apps".to_string()))?;
+        let Some(n) = app_display_name(&app) else {
+            continue;
+        };
 
         if PAIRING_APPS.iter().any(|(name, _)| name == &n) {
             if bundle_id.contains("com.stik.stikdebug") {
@@ -520,25 +545,59 @@ pub async fn get_sidestore_info(
         })?;
 
     for (bundle_id, app) in installed_apps {
-        let n = app
-            .as_dictionary()
-            .and_then(|x| x.get("CFBundleDisplayName").and_then(|x| x.as_string()))
-            .ok_or(AppError::Misc("Failed to parse installed apps".to_string()))?;
+        let Some(n) = app_display_name(&app) else {
+            continue;
+        };
 
-        if n == "SideStore" || (live_container && n == "LiveContainer") {
+        if let Some(path) = store_pairing_path(n, live_container) {
             return Ok(Some(PairingAppInfo {
                 name: n.to_string(),
                 bundle_id: bundle_id.to_string(),
-                path: PAIRING_APPS
-                    .iter()
-                    .find(|(name, _)| name == &n)
-                    .map(|(_, path)| path.to_string())
-                    .unwrap_or_default(),
+                path: path.to_string(),
             }));
         }
     }
 
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognises_store_pairing_targets() {
+        assert_eq!(
+            store_pairing_path("SideStore", false),
+            Some("ALTPairingFile.mobiledevicepairing")
+        );
+        assert_eq!(
+            store_pairing_path("AnderStore", true),
+            Some("SideStore/Documents/ALTPairingFile.mobiledevicepairing")
+        );
+        assert_eq!(
+            store_pairing_path("LiveContainer", true),
+            Some("SideStore/Documents/ALTPairingFile.mobiledevicepairing")
+        );
+        assert_eq!(store_pairing_path("AnderStore", false), None);
+        assert_eq!(store_pairing_path("Unrelated App", true), None);
+    }
+
+    #[test]
+    fn falls_back_to_bundle_name_and_skips_missing_names() {
+        let fallback = plist::Value::Dictionary(
+            [(
+                "CFBundleName".to_string(),
+                plist::Value::String("AnderStore".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let unnamed = plist::Value::Dictionary(Default::default());
+
+        assert_eq!(app_display_name(&fallback), Some("AnderStore"));
+        assert_eq!(app_display_name(&unnamed), None);
+    }
 }
 
 fn parse_version_component(segment: Option<&str>) -> u32 {

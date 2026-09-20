@@ -14,19 +14,39 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Manager, State, Window};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::time::{Duration, sleep};
+use tracing::warn;
 
 const UPDATES_URL: &str = "https://store.andresot.uk/updates.json";
+const GITHUB_LATEST_RELEASE_URL: &str =
+    "https://api.github.com/repos/ANDRESOTRU/AnderStore/releases/latest";
+const ANDERSTORE_ASSET_NAME: &str = "AnderStore.ipa";
 
 #[derive(Debug, Deserialize)]
 struct UpdatesManifest {
     anderstore: UpdateArtifact,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 struct UpdateArtifact {
     version: String,
     url: String,
     sha256: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    draft: bool,
+    prerelease: bool,
+    assets: Vec<GitHubReleaseAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubReleaseAsset {
+    name: String,
+    browser_download_url: String,
+    digest: Option<String>,
 }
 
 pub type SideloaderMutex = Mutex<Option<Sideloader>>;
@@ -184,10 +204,19 @@ pub async fn install_sidestore_operation(
         .await,
     )?;
     op.move_on("install", "pairing")?;
-    let sidestore_info = op.fail_if_err(
-        "pairing",
-        get_sidestore_info(&device.info, live_container).await,
-    )?;
+    let mut sidestore_info = None;
+    for attempt in 0..4_u64 {
+        sidestore_info = op.fail_if_err(
+            "pairing",
+            get_sidestore_info(&device.info, live_container).await,
+        )?;
+        if sidestore_info.is_some() {
+            break;
+        }
+        if attempt < 3 {
+            sleep(Duration::from_millis(500 * (attempt + 1))).await;
+        }
+    }
     if let Some(info) = sidestore_info {
         let mut usbmuxd = op.fail_if_err("pairing", get_usbmuxd().await)?;
 
@@ -204,8 +233,8 @@ pub async fn install_sidestore_operation(
         return op.fail(
             "pairing",
             AppError::HouseArrest(
-                "SideStore's not found".into(),
-                "The device did not report SideStore's bundle ID as installed".into(),
+                "AnderStore was not found after installation".into(),
+                "The iPhone did not report AnderStore's bundle ID after four checks".into(),
             ),
         );
     }
@@ -244,31 +273,141 @@ pub async fn download(url: impl AsRef<str>, dest: &PathBuf) -> Result<(), AppErr
     Ok(())
 }
 
-async fn fetch_anderstore_artifact() -> Result<UpdateArtifact, AppError> {
-    let response = reqwest::get(UPDATES_URL)
+fn validate_artifact(artifact: UpdateArtifact, source: &str) -> Result<UpdateArtifact, AppError> {
+    if artifact.url.is_empty()
+        || artifact.version.is_empty()
+        || artifact.sha256.len() != 64
+        || !artifact.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(AppError::Download(format!(
+            "{source} does not contain a complete AnderStore artifact"
+        )));
+    }
+    Ok(UpdateArtifact {
+        sha256: artifact.sha256.to_ascii_lowercase(),
+        ..artifact
+    })
+}
+
+fn parse_updates_manifest(body: &str) -> Result<UpdateArtifact, AppError> {
+    let manifest: UpdatesManifest = serde_json::from_str(body)
+        .map_err(|error| AppError::Download(format!("Invalid updates.json: {error}")))?;
+    validate_artifact(manifest.anderstore, "updates.json")
+}
+
+fn parse_github_release(body: &str) -> Result<UpdateArtifact, AppError> {
+    let release: GitHubRelease = serde_json::from_str(body)
+        .map_err(|error| AppError::Download(format!("Invalid GitHub release response: {error}")))?;
+    if release.draft || release.prerelease {
+        return Err(AppError::Download(
+            "GitHub returned a draft or prerelease instead of a stable AnderStore release".into(),
+        ));
+    }
+
+    let version = release
+        .tag_name
+        .strip_prefix('v')
+        .unwrap_or(&release.tag_name)
+        .to_string();
+    if version.is_empty() || version.eq_ignore_ascii_case("nightly") {
+        return Err(AppError::Download(
+            "GitHub release does not contain a stable version tag".into(),
+        ));
+    }
+
+    let asset = release
+        .assets
+        .into_iter()
+        .find(|asset| asset.name == ANDERSTORE_ASSET_NAME)
+        .ok_or_else(|| {
+            AppError::Download(format!(
+                "GitHub release does not contain {ANDERSTORE_ASSET_NAME}"
+            ))
+        })?;
+    let digest = asset.digest.ok_or_else(|| {
+        AppError::Download(format!(
+            "GitHub did not provide a SHA-256 digest for {ANDERSTORE_ASSET_NAME}"
+        ))
+    })?;
+    let sha256 = digest
+        .strip_prefix("sha256:")
+        .ok_or_else(|| AppError::Download("GitHub asset digest is not SHA-256".into()))?
+        .to_string();
+
+    validate_artifact(
+        UpdateArtifact {
+            version,
+            url: asset.browser_download_url,
+            sha256,
+        },
+        "GitHub release",
+    )
+}
+
+async fn fetch_updates_artifact() -> Result<UpdateArtifact, AppError> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|error| AppError::Download(format!("Failed to create HTTP client: {error}")))?;
+    let response = client
+        .get(UPDATES_URL)
+        .send()
         .await
-        .map_err(|error| AppError::Download(error.to_string()))?;
+        .map_err(|error| AppError::Download(format!("updates.json request failed: {error}")))?;
+    if response.status().is_redirection() {
+        return Err(AppError::Download(format!(
+            "updates.json redirected with HTTP {}",
+            response.status()
+        )));
+    }
     if !response.status().is_success() {
         return Err(AppError::Download(format!(
             "updates.json: HTTP {}",
             response.status()
         )));
     }
-    let manifest: UpdatesManifest = response
-        .json()
+    let body = response
+        .text()
         .await
-        .map_err(|error| AppError::Download(format!("Invalid updates.json: {error}")))?;
-    let artifact = manifest.anderstore;
-    if artifact.url.is_empty()
-        || artifact.version.is_empty()
-        || artifact.sha256.len() != 64
-        || !artifact.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
-    {
-        return Err(AppError::Download(
-            "updates.json does not contain a complete AnderStore artifact".into(),
-        ));
+        .map_err(|error| AppError::Download(format!("Failed to read updates.json: {error}")))?;
+    parse_updates_manifest(&body)
+}
+
+async fn fetch_github_artifact() -> Result<UpdateArtifact, AppError> {
+    let response = reqwest::Client::new()
+        .get(GITHUB_LATEST_RELEASE_URL)
+        .header(reqwest::header::ACCEPT, "application/vnd.github+json")
+        .header(reqwest::header::USER_AGENT, "AnderStore-Installer")
+        .send()
+        .await
+        .map_err(|error| AppError::Download(format!("GitHub release request failed: {error}")))?;
+    if !response.status().is_success() {
+        return Err(AppError::Download(format!(
+            "GitHub release: HTTP {}",
+            response.status()
+        )));
     }
-    Ok(artifact)
+    let body = response.text().await.map_err(|error| {
+        AppError::Download(format!("Failed to read GitHub release response: {error}"))
+    })?;
+    parse_github_release(&body)
+}
+
+async fn fetch_anderstore_artifact() -> Result<UpdateArtifact, AppError> {
+    match fetch_updates_artifact().await {
+        Ok(artifact) => Ok(artifact),
+        Err(primary_error) => {
+            warn!(
+                error = %primary_error,
+                "updates.json is unavailable; using the latest stable GitHub release"
+            );
+            fetch_github_artifact().await.map_err(|fallback_error| {
+                AppError::Download(format!(
+                    "Unable to resolve AnderStore IPA. Primary source: {primary_error}. GitHub fallback: {fallback_error}"
+                ))
+            })
+        }
+    }
 }
 
 async fn sha256_file(path: &Path) -> Result<String, AppError> {
@@ -299,11 +438,65 @@ mod tests {
 
     #[test]
     fn parses_update_manifest() {
-        let manifest: UpdatesManifest = serde_json::from_str(r#"{
+        let artifact = parse_updates_manifest(r#"{
             "anderstore":{"version":"1.6.0","url":"https://example.test/app.ipa","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
         }"#).expect("manifest should parse");
-        assert_eq!(manifest.anderstore.version, "1.6.0");
-        assert_eq!(manifest.anderstore.sha256.len(), 64);
+        assert_eq!(artifact.version, "1.6.0");
+        assert_eq!(artifact.sha256.len(), 64);
+    }
+
+    #[test]
+    fn rejects_html_instead_of_updates_manifest() {
+        assert!(parse_updates_manifest("<!doctype html><title>Download</title>").is_err());
+    }
+
+    #[test]
+    fn parses_stable_github_release_asset() {
+        let artifact = parse_github_release(
+            r#"{
+            "tag_name":"v1.6.42",
+            "draft":false,
+            "prerelease":false,
+            "assets":[{
+                "name":"AnderStore.ipa",
+                "browser_download_url":"https://github.example/AnderStore.ipa",
+                "digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }]
+        }"#,
+        )
+        .expect("GitHub release should parse");
+        assert_eq!(artifact.version, "1.6.42");
+        assert_eq!(artifact.sha256, "b".repeat(64));
+    }
+
+    #[test]
+    fn rejects_github_asset_without_sha256() {
+        let result = parse_github_release(
+            r#"{
+            "tag_name":"v1.6.42",
+            "draft":false,
+            "prerelease":false,
+            "assets":[{
+                "name":"AnderStore.ipa",
+                "browser_download_url":"https://github.example/AnderStore.ipa",
+                "digest":null
+            }]
+        }"#,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_prerelease_as_production_fallback() {
+        let result = parse_github_release(
+            r#"{
+            "tag_name":"nightly",
+            "draft":false,
+            "prerelease":true,
+            "assets":[]
+        }"#,
+        );
+        assert!(result.is_err());
     }
 
     #[tokio::test]

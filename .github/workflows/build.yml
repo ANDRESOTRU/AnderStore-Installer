@@ -32,8 +32,13 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          $version = "2.3.${{ github.run_number }}"
           $config = Get-Content -Raw src-tauri/tauri.conf.json | ConvertFrom-Json
-          "version=$($config.version)" >> $env:GITHUB_OUTPUT
+          $ciConfig = Get-Content -Raw src-tauri/ci.conf.json | ConvertFrom-Json
+          $ciConfig | Add-Member -NotePropertyName version -NotePropertyValue $version -Force
+          $ciConfig | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 src-tauri/ci.conf.json
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Output "AnderStore Installer version $version (base version $($config.version))"
 
       - name: Build and publish signed updater
         id: tauri_build
@@ -53,6 +58,7 @@ jobs:
           args: --bundles nsis --config src-tauri/ci.conf.json
 
       - name: Collect installer
+        id: collect_installer
         if: always()
         shell: bash
         run: |
@@ -61,14 +67,14 @@ jobs:
           ls -la out
 
       - name: Upload artifact
-        if: always()
+        if: steps.collect_installer.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: AnderStore-Installer-Setup
           path: out/AnderStore-Installer-Setup.exe
 
       - name: Publish installer release
-        if: always()
+        if: steps.collect_installer.outcome == 'success'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,9 +87,9 @@ jobs:
               --target "${{ github.sha }}" `
               --notes "AnderStore Installer for Windows."
           }
-          gh release upload $tag out/AnderStore-Installer-Setup.exe --clobber
+          gh release upload $tag out/AnderStore-Installer-Setup.exe
 
       - name: Report updater signing fallback
-        if: steps.tauri_build.outcome == 'failure'
+        if: steps.tauri_build.outcome == 'failure' && steps.collect_installer.outcome == 'success'
         shell: pwsh
         run: Write-Output "::warning::The EXE was published, but the signed updater artifacts require a valid TAURI_SIGNING_PRIVATE_KEY secret."
