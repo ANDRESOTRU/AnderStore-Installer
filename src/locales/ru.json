@@ -275,7 +275,10 @@
     "new_version_available": "Доступна новая версия: {{version}}. Обновить?",
     "updating": "Обновление...",
     "downloaded_restarting": "Обновление загружено! Перезагрузка приложения...",
-    "failed_download": "Не удалось загрузить обновление: {{error}}"
+    "failed_download": "Не удалось загрузить обновление: {{error}}",
+    "check": "Проверить обновления",
+    "up_to_date": "Установлена актуальная версия AnderStore Installer.",
+    "check_failed": "Не удалось проверить обновления: {{error}}"
   },
   "wizard": {
     "progress": "Шаг {{current}} из {{total}}",

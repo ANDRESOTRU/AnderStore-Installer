@@ -1,4 +1,7 @@
-use std::{path::PathBuf, sync::Mutex};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 use crate::{
     device::{DeviceInfoMutex, get_provider, get_provider_from_connection, get_usbmuxd},
@@ -7,7 +10,24 @@ use crate::{
     pairing::{get_sidestore_info, place_file},
 };
 use isideload::sideload::{application::SpecialApp, sideloader::Sideloader};
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Manager, State, Window};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+const UPDATES_URL: &str = "https://store.andresot.uk/updates.json";
+
+#[derive(Debug, Deserialize)]
+struct UpdatesManifest {
+    anderstore: UpdateArtifact,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateArtifact {
+    version: String,
+    url: String,
+    sha256: String,
+}
 
 pub type SideloaderMutex = Mutex<Option<Sideloader>>;
 
@@ -98,20 +118,54 @@ pub async fn install_sidestore_operation(
 ) -> Result<(), AppError> {
     let op = Operation::new("install_sidestore".to_string(), &window);
     op.start("download")?;
-    // TODO: Cache & check version to avoid re-downloading
-    // AnderStore: single build, always the latest nightly release
     let _ = (nightly, live_container);
-    let (filename, url) = (
-        "AnderStore.ipa",
-        "https://github.com/ANDRESOTRU/AnderStore/releases/download/nightly/AnderStore.ipa",
-    );
-
-    let dest = handle
+    let artifact = op.fail_if_err("download", fetch_anderstore_artifact().await)?;
+    let cache_dir = handle
         .path()
-        .temp_dir()
-        .map_err(|e| AppError::Filesystem("Failed to get temp dir".into(), e.to_string()))?
-        .join(filename);
-    op.fail_if_err("download", download(url, &dest).await)?;
+        .app_cache_dir()
+        .map_err(|e| AppError::Filesystem("Failed to get cache dir".into(), e.to_string()))?;
+    op.fail_if_err(
+        "download",
+        tokio::fs::create_dir_all(&cache_dir)
+            .await
+            .map_err(|e| AppError::Filesystem("Failed to create cache dir".into(), e.to_string())),
+    )?;
+    let safe_version: String = artifact
+        .version
+        .chars()
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || *character == '.' || *character == '-'
+        })
+        .collect();
+    let dest = cache_dir.join(format!("AnderStore-{safe_version}.ipa"));
+
+    let cached_is_valid = if tokio::fs::try_exists(&dest).await.unwrap_or(false) {
+        checksum_matches(&dest, &artifact.sha256)
+            .await
+            .unwrap_or(false)
+    } else {
+        false
+    };
+    if !cached_is_valid {
+        let partial = dest.with_extension("ipa.download");
+        let _ = tokio::fs::remove_file(&partial).await;
+        op.fail_if_err("download", download(&artifact.url, &partial).await)?;
+        let actual = op.fail_if_err("download", sha256_file(&partial).await)?;
+        if actual != artifact.sha256.to_lowercase() {
+            let _ = tokio::fs::remove_file(&partial).await;
+            return op.fail(
+                "download",
+                AppError::Download("AnderStore.ipa SHA-256 mismatch".into()),
+            );
+        }
+        let _ = tokio::fs::remove_file(&dest).await;
+        op.fail_if_err(
+            "download",
+            tokio::fs::rename(&partial, &dest).await.map_err(|e| {
+                AppError::Filesystem("Failed to commit cached IPA".into(), e.to_string())
+            }),
+        )?;
+    }
     op.move_on("download", "install")?;
     let device = {
         let device_guard = device_state.lock().unwrap();
@@ -161,7 +215,7 @@ pub async fn install_sidestore_operation(
 }
 
 pub async fn download(url: impl AsRef<str>, dest: &PathBuf) -> Result<(), AppError> {
-    let response = reqwest::get(url.as_ref())
+    let mut response = reqwest::get(url.as_ref())
         .await
         .map_err(|e| AppError::Download(e.to_string()))?;
     if !response.status().is_success() {
@@ -171,13 +225,104 @@ pub async fn download(url: impl AsRef<str>, dest: &PathBuf) -> Result<(), AppErr
         )));
     }
 
-    let bytes = response
-        .bytes()
+    let mut file = tokio::fs::File::create(dest).await.map_err(|e| {
+        AppError::Filesystem("Failed to create downloaded file".into(), e.to_string())
+    })?;
+    while let Some(chunk) = response
+        .chunk()
         .await
-        .map_err(|e| AppError::Download(e.to_string()))?;
-    tokio::fs::write(dest, &bytes).await.map_err(|e| {
-        AppError::Filesystem("Failed to write downloaded file".into(), e.to_string())
+        .map_err(|e| AppError::Download(e.to_string()))?
+    {
+        file.write_all(&chunk).await.map_err(|e| {
+            AppError::Filesystem("Failed to write downloaded file".into(), e.to_string())
+        })?;
+    }
+    file.flush().await.map_err(|e| {
+        AppError::Filesystem("Failed to finish downloaded file".into(), e.to_string())
     })?;
 
     Ok(())
+}
+
+async fn fetch_anderstore_artifact() -> Result<UpdateArtifact, AppError> {
+    let response = reqwest::get(UPDATES_URL)
+        .await
+        .map_err(|error| AppError::Download(error.to_string()))?;
+    if !response.status().is_success() {
+        return Err(AppError::Download(format!(
+            "updates.json: HTTP {}",
+            response.status()
+        )));
+    }
+    let manifest: UpdatesManifest = response
+        .json()
+        .await
+        .map_err(|error| AppError::Download(format!("Invalid updates.json: {error}")))?;
+    let artifact = manifest.anderstore;
+    if artifact.url.is_empty()
+        || artifact.version.is_empty()
+        || artifact.sha256.len() != 64
+        || !artifact.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(AppError::Download(
+            "updates.json does not contain a complete AnderStore artifact".into(),
+        ));
+    }
+    Ok(artifact)
+}
+
+async fn sha256_file(path: &Path) -> Result<String, AppError> {
+    let mut file = tokio::fs::File::open(path).await.map_err(|error| {
+        AppError::Filesystem("Failed to open file for checksum".into(), error.to_string())
+    })?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0_u8; 1024 * 1024];
+    loop {
+        let count = file.read(&mut buffer).await.map_err(|error| {
+            AppError::Filesystem("Failed to read file for checksum".into(), error.to_string())
+        })?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+async fn checksum_matches(path: &Path, expected: &str) -> Result<bool, AppError> {
+    Ok(sha256_file(path).await? == expected.to_ascii_lowercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_update_manifest() {
+        let manifest: UpdatesManifest = serde_json::from_str(r#"{
+            "anderstore":{"version":"1.6.0","url":"https://example.test/app.ipa","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+        }"#).expect("manifest should parse");
+        assert_eq!(manifest.anderstore.version, "1.6.0");
+        assert_eq!(manifest.anderstore.sha256.len(), 64);
+    }
+
+    #[tokio::test]
+    async fn rejects_cached_ipa_with_wrong_hash() {
+        let path = std::env::temp_dir().join(format!(
+            "anderstore-checksum-{}-{}.ipa",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock")
+                .as_nanos()
+        ));
+        tokio::fs::write(&path, b"not an ipa")
+            .await
+            .expect("test file");
+        let matches = checksum_matches(&path, &"0".repeat(64))
+            .await
+            .expect("checksum");
+        let _ = tokio::fs::remove_file(&path).await;
+        assert!(!matches);
+    }
 }

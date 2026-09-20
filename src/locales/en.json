@@ -275,7 +275,10 @@
     "new_version_available": "A new version is available: {{version}}. Do you want to update?",
     "updating": "Updating...",
     "downloaded_restarting": "Update downloaded! Restarting app...",
-    "failed_download": "Failed to download update: {{error}}"
+    "failed_download": "Failed to download update: {{error}}",
+    "check": "Check for updates",
+    "up_to_date": "AnderStore Installer is up to date.",
+    "check_failed": "Unable to check for updates: {{error}}"
   },
   "wizard": {
     "progress": "Step {{current}} of {{total}}",

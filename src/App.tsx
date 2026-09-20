@@ -66,7 +66,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    checkForUpdates();
+    void checkForUpdates(true);
   }, []);
 
   const shortcutLabel = useCallback(
@@ -193,6 +193,12 @@ function App() {
         <div className="header-actions">
           <button
             className="toolbar-button"
+            onClick={() => void checkForUpdates(false)}
+          >
+            {t("update.check")}
+          </button>
+          <button
+            className="toolbar-button"
             onClick={async () => {
               try {
                 await openUrl(HELP_URL);
@@ -218,7 +224,7 @@ function App() {
           }}
           install={() =>
             startOperation(installAnderStoreOperation, {
-              nightly: true,
+              nightly: false,
               liveContainer: true,
             })
           }
