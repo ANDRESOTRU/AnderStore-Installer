@@ -36,6 +36,8 @@ jobs:
           "version=$($config.version)" >> $env:GITHUB_OUTPUT
 
       - name: Build and publish signed updater
+        id: tauri_build
+        continue-on-error: true
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,6 +53,7 @@ jobs:
           args: --bundles nsis --config src-tauri/ci.conf.json
 
       - name: Collect installer
+        if: always()
         shell: bash
         run: |
           mkdir -p out
@@ -58,7 +61,29 @@ jobs:
           ls -la out
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: AnderStore-Installer-Setup
           path: out/AnderStore-Installer-Setup.exe
+
+      - name: Publish installer release
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "v${{ steps.version.outputs.version }}"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag `
+              --title "AnderStore Installer $tag" `
+              --target "${{ github.sha }}" `
+              --notes "AnderStore Installer for Windows."
+          }
+          gh release upload $tag out/AnderStore-Installer-Setup.exe --clobber
+
+      - name: Report updater signing fallback
+        if: steps.tauri_build.outcome == 'failure'
+        shell: pwsh
+        run: Write-Output "::warning::The EXE was published, but the signed updater artifacts require a valid TAURI_SIGNING_PRIVATE_KEY secret."
