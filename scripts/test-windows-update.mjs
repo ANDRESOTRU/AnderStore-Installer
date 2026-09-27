@@ -126,9 +126,18 @@ try {
     return version.status === 0 && version.stdout.trim() === expected;
   }, "native updater installation", 180000);
   client.close();
-  client = await until(connect, "restarted WebView");
-  await until(() => evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`), "new version after restart");
-  await evaluate("document.querySelector('details.saved-guides').open = true");
+  client = await until(async () => {
+    const candidate = await connect();
+    if (!candidate) return;
+    client = candidate;
+    try {
+      if (await evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`)) return candidate;
+    } finally {
+      if (!(await evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`).catch(() => false))) candidate.close();
+    }
+  }, "new version in restarted WebView");
+  await until(() => evaluate("!!document.querySelector('details.saved-guides')"), "saved guides after restart");
+  await evaluate("document.querySelectorAll('details.saved-guides, details.saved-guides > details').forEach(details => details.open = true)");
   const after = await snapshot("after-update");
   for (const receipt of Object.values(receipts)) assert.ok(after.includes(receipt.appleId), "Saved guide must remain accessible");
   const saved = JSON.parse(readFileSync(preferencesPath, "utf8"));
