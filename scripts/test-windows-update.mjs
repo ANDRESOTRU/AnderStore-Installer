@@ -56,7 +56,7 @@ writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }
 const port = 19227;
 // GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
 // current WebView2 runtimes do not expose CDP from an elevated host.
-const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", executable], { stdio: "inherit", env: {
+const app = spawn("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", executable], { stdio: "inherit", env: {
   ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
 } });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
