@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, openSync, cpSync } from "node:fs";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { verifySignature } from "./validate-updater.mjs";
@@ -43,6 +43,7 @@ const install = spawnSync(setupPath, ["/S"], { timeout: 180000, windowsHide: tru
 assert.equal(install.status, 0, "Baseline NSIS installation must succeed");
 const executable = join(process.env.LOCALAPPDATA, "AnderStore Installer", "anderstore-installer.exe");
 assert.ok(existsSync(executable), "Test must run the installed app");
+console.log(`Installed baseline executable: ${executable}`);
 const preferencesPath = join(process.env.APPDATA, "uk.andresot.anderstore.installer", "preferences.json");
 mkdirSync(join(process.env.APPDATA, "uk.andresot.anderstore.installer"), { recursive: true });
 const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
@@ -51,9 +52,12 @@ const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
 }]));
 writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }));
 const port = 19227;
-const app = spawn(executable, [], { detached: true, stdio: "ignore", env: {
+const appLog = openSync(join(output, "app-output.txt"), "w");
+const app = spawn(executable, [], { detached: true, stdio: ["ignore", appLog, appLog], env: {
   ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
 } });
+app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
+app.on("exit", (code, signal) => console.log(`Baseline exited: code=${code}, signal=${signal}`));
 app.unref();
 let client;
 async function connect() {
@@ -149,4 +153,10 @@ try {
   assert.deepEqual(saved.installationReceipts, receipts, "Both accounts and dates must survive the actual update");
   writeFileSync(join(output, "result.json"), JSON.stringify({ baseline, updated: expected, restarted: true, receiptsPreserved: 2, observedProgress }, null, 2));
   console.log(`PASS: ${baseline} → ${expected}; native signed update, automatic restart, and both saved guides verified.`);
-} finally { client?.close(); }
+} finally {
+  client?.close();
+  const diagnostic = spawnSync("powershell.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
+  writeFileSync(join(output, "processes.json"), diagnostic.stdout);
+  const logs = join(process.env.APPDATA, "uk.andresot.anderstore.installer", "logs");
+  if (existsSync(logs)) cpSync(logs, join(output, "app-logs"), { recursive: true });
+}
