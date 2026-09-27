@@ -130,10 +130,12 @@ try {
     const candidate = await connect();
     if (!candidate) return;
     client = candidate;
+    let accepted = false;
     try {
-      if (await evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`)) return candidate;
+      accepted = await evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`);
+      if (accepted) return candidate;
     } finally {
-      if (!(await evaluate(`document.querySelector('header')?.innerText.includes(${JSON.stringify(expected)})`).catch(() => false))) candidate.close();
+      if (!accepted) candidate.close();
     }
   }, "new version in restarted WebView");
   await until(() => evaluate("!!document.querySelector('details.saved-guides')"), "saved guides after restart");
