@@ -53,11 +53,13 @@ const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
 writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }));
 const port = 19227;
 const appLog = openSync(join(output, "app-output.txt"), "w");
-const app = spawn(executable, [], { detached: true, stdio: ["ignore", appLog, appLog], env: {
+// GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
+// current WebView2 runtimes do not expose CDP from an elevated host.
+const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", `"${executable}"`], { detached: true, stdio: ["ignore", appLog, appLog], env: {
   ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
 } });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
-app.on("exit", (code, signal) => console.log(`Baseline exited: code=${code}, signal=${signal}`));
+app.on("exit", (code, signal) => console.log(`Baseline launcher exited: code=${code}, signal=${signal}`));
 app.unref();
 let client;
 async function connect() {
