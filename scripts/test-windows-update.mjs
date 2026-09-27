@@ -48,14 +48,14 @@ const testEnvironment = { ...process.env,
   ANDERSTORE_SMOKE_PROFILE: testProfile,
   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=19227",
 };
-const account = spawnSync("powershell.exe", ["-NoProfile", "-Command", "$secret = ConvertTo-SecureString $env:ANDERSTORE_SMOKE_PASSWORD -AsPlainText -Force; New-LocalUser -Name $env:ANDERSTORE_SMOKE_USERNAME -Password $secret -PasswordNeverExpires -ErrorAction Stop | Out-Null; Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $env:ANDERSTORE_SMOKE_USERNAME -ErrorAction Stop"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
+const account = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "$secret = ConvertTo-SecureString $env:ANDERSTORE_SMOKE_PASSWORD -AsPlainText -Force; New-LocalUser -Name $env:ANDERSTORE_SMOKE_USERNAME -Password $secret -PasswordNeverExpires -ErrorAction Stop | Out-Null; Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $env:ANDERSTORE_SMOKE_USERNAME -ErrorAction Stop"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
 assert.equal(account.status, 0, `Create isolated ordinary test user: ${account.stderr}`);
 const launcher = "scripts/launch-standard-user-smoke.ps1";
-const profileSetup = spawnSync("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.env.WINDIR, "System32", "cmd.exe"), "-Arguments", "/d /c exit 0", "-Wait"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
+const profileSetup = spawnSync("pwsh.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.env.WINDIR, "System32", "cmd.exe"), "-Arguments", "/d /c exit 0", "-Wait"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
 assert.equal(profileSetup.status, 0, `Initialize test profile: ${profileSetup.stderr}`);
 const installationDirectory = join(testProfile, "AppData", "Local", "anderstore-updater-smoke");
 assert.ok(!/\s/.test(installationDirectory), "CI installation directory must be unambiguous for runas");
-const install = spawnSync("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.cwd(), setupPath), "-Arguments", `/S /D=${installationDirectory}`, "-Wait"], { timeout: 180000, windowsHide: true, encoding: "utf8", env: testEnvironment });
+const install = spawnSync("pwsh.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.cwd(), setupPath), "-Arguments", `/S /D=${installationDirectory}`, "-Wait"], { timeout: 180000, windowsHide: true, encoding: "utf8", env: testEnvironment });
 assert.equal(install.status, 0, "Baseline NSIS installation must succeed");
 const executable = join(installationDirectory, "anderstore-installer.exe");
 assert.ok(existsSync(executable), "Test must run the installed app");
@@ -71,7 +71,7 @@ writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }
 const port = 19227;
 // Use an actual standard account: hosted runners disable UAC and synthetic
 // restricted administrator tokens do not behave like a normal installer user.
-const app = spawn("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", executable], { stdio: "inherit", env: testEnvironment });
+const app = spawn("pwsh.exe", ["-NoProfile", "-File", launcher, "-Executable", executable], { stdio: "inherit", env: testEnvironment });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
 let launchFailure;
 app.on("exit", (code, signal) => {
@@ -148,7 +148,7 @@ try {
         writeFileSync(join(output, "update-error.txt"), String(error));
       }
     }
-    const version = spawnSync("powershell.exe", ["-NoProfile", "-Command", "(Get-Item -LiteralPath $env:ANDERSTORE_SMOKE_EXE).VersionInfo.ProductVersion"], {
+    const version = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "(Get-Item -LiteralPath $env:ANDERSTORE_SMOKE_EXE).VersionInfo.ProductVersion"], {
       encoding: "utf8", windowsHide: true, env: { ...process.env, ANDERSTORE_SMOKE_EXE: executable },
     });
     return version.status === 0 && version.stdout.trim() === expected;
@@ -176,7 +176,7 @@ try {
   console.log(`PASS: ${baseline} → ${expected}; native signed update, automatic restart, and both saved guides verified.`);
 } finally {
   client?.close();
-  const diagnostic = spawnSync("powershell.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
+  const diagnostic = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
   writeFileSync(join(output, "processes.json"), diagnostic.stdout);
   const logs = join(appData, "logs");
   if (existsSync(logs)) cpSync(logs, join(output, "app-logs"), { recursive: true });

@@ -31,6 +31,7 @@ public static class StandardUserSmoke {
     var password=Environment.GetEnvironmentVariable("ANDERSTORE_SMOKE_PASSWORD");
     values["USERNAME"]=username; values["USERPROFILE"]=profile;
     values["APPDATA"]=profile+"\\AppData\\Roaming"; values["LOCALAPPDATA"]=profile+"\\AppData\\Local";
+    values["TEMP"]=profile+"\\AppData\\Local\\Temp"; values["TMP"]=values["TEMP"];
     // No credentials or runner tokens belong in the application environment.
     values.Remove("ANDERSTORE_SMOKE_PASSWORD"); values.Remove("ANDERSTORE_SMOKE_USERNAME");
     values.Remove("GITHUB_TOKEN"); values.Remove("GH_TOKEN");
