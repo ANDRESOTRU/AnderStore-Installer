@@ -38,16 +38,29 @@ public static class SmokeLauncher {
   [DllImport("kernel32.dll")]
   static extern bool CloseHandle(IntPtr handle);
   [DllImport("kernel32.dll")]
+  static extern IntPtr GetCurrentProcess();
+  [DllImport("advapi32.dll",SetLastError=true)]
+  static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
+  [DllImport("advapi32.dll",SetLastError=true)]
+  static extern bool GetTokenInformation(IntPtr token,int kind,out IntPtr value,uint size,out uint returned);
+  [DllImport("kernel32.dll")]
   static extern IntPtr LocalFree(IntPtr handle);
   static void Check(bool value,string operation) { if (!value) throw new Win32Exception(Marshal.GetLastWin32Error(),operation); }
   public static uint Launch(string executable) {
-    IntPtr level=IntPtr.Zero,token=IntPtr.Zero,sid=IntPtr.Zero;
+    IntPtr level=IntPtr.Zero,token=IntPtr.Zero,sid=IntPtr.Zero,parent=IntPtr.Zero;
     try {
-      Check(SaferCreateLevel(1,0x20000,1,out level,IntPtr.Zero),"Create normal-user level");
-      Check(SaferComputeTokenFromLevel(level,IntPtr.Zero,out token,0,IntPtr.Zero),"Create normal-user token");
-      Check(ConvertStringSidToSid("S-1-16-8192",out sid),"Create medium-integrity SID");
-      var label=new SidAttributes { sid=sid,attributes=0x20 };
-      Check(SetTokenInformation(token,25,ref label,(uint)Marshal.SizeOf(typeof(SidAttributes))+GetLengthSid(sid)),"Set child token integrity");
+      Check(OpenProcessToken(GetCurrentProcess(),8,out parent),"Read runner token");
+      uint returned;
+      if(GetTokenInformation(parent,19,out token,(uint)IntPtr.Size,out returned)) {
+        Console.WriteLine("Using the standard Windows UAC user token.");
+      } else {
+        Console.WriteLine("No linked UAC token; using a restricted normal-user token.");
+        Check(SaferCreateLevel(1,0x20000,1,out level,IntPtr.Zero),"Create normal-user level");
+        Check(SaferComputeTokenFromLevel(level,IntPtr.Zero,out token,0,IntPtr.Zero),"Create normal-user token");
+        Check(ConvertStringSidToSid("S-1-16-8192",out sid),"Create medium-integrity SID");
+        var label=new SidAttributes { sid=sid,attributes=0x20 };
+        Check(SetTokenInformation(token,25,ref label,(uint)Marshal.SizeOf(typeof(SidAttributes))+GetLengthSid(sid)),"Set child token integrity");
+      }
       var startup=new StartupInfo { cb=Marshal.SizeOf(typeof(StartupInfo)),desktop="winsta0\\default" };
       ProcessInfo process;
       Check(CreateProcessAsUser(token,executable,"\""+executable+"\"",IntPtr.Zero,IntPtr.Zero,false,0,IntPtr.Zero,null,ref startup,out process),"Launch installed app");
@@ -56,6 +69,7 @@ public static class SmokeLauncher {
     } finally {
       if(sid!=IntPtr.Zero)LocalFree(sid);
       if(token!=IntPtr.Zero)CloseHandle(token);
+      if(parent!=IntPtr.Zero)CloseHandle(parent);
       if(level!=IntPtr.Zero)SaferCloseLevel(level);
     }
   }
