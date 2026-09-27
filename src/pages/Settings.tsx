@@ -1,11 +1,11 @@
 import "./Settings.css";
 import { useStore } from "../StoreContext";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogLevel, useLogs } from "../LogContext";
 import { Modal } from "../components/Modal";
 import { Dropdown } from "../components/Dropdown";
 import { toast } from "sonner";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, useActivity } from "../activity";
 import { useError } from "../ErrorContext";
 import { Virtuoso } from "react-virtuoso";
 import { useDialog } from "../DialogContext";
@@ -31,6 +31,8 @@ export const Settings = ({
   checkKeyring,
 }: SettingsProps) => {
   const { t } = useTranslation();
+  const busy = useActivity();
+  const appliedKeyringSetting = useRef<boolean | undefined>(undefined);
   const [anisetteServer, setAnisetteServer] = useStore<string>(
     "anisetteServer",
     "ani.sidestore.io",
@@ -89,11 +91,12 @@ export const Settings = ({
   }, [platform]);
 
   useEffect(() => {
-    (async () => {
-      await invoke("force_disable_keyring", { force: overrideKeyring });
-      checkKeyring();
-    })();
-  }, [overrideKeyring]);
+    if (busy || appliedKeyringSetting.current === overrideKeyring) return;
+    appliedKeyringSetting.current = overrideKeyring;
+    void invoke("force_disable_keyring", { force: overrideKeyring })
+      .then(checkKeyring)
+      .catch((error) => err(t("error.title"), error));
+  }, [overrideKeyring, busy, checkKeyring, err, t]);
 
   return (
     <>

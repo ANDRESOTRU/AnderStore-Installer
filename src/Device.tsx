@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./Device.css";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, activity, useActivity } from "./activity";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Modal } from "./components/Modal";
@@ -10,7 +10,7 @@ import { AppError } from "./errors";
 export type DeviceInfo = {
   name: string;
   id: number;
-  uuid: string;
+  udid: string;
   connectionType: "USB" | "Network" | "Unknown";
   version: string;
 };
@@ -25,6 +25,7 @@ export const Device = ({
   registerRefresh?: (fn?: () => void) => void;
 }) => {
   const { t } = useTranslation();
+  const busy = useActivity();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [waitingToPair, setWaitingToPair] = useState<DeviceInfo | null>(null);
   const [showPairingModal, setShowPairingModal] = useState(false);
@@ -50,6 +51,7 @@ export const Device = ({
 
   const selectDevice = useCallback(
     (device: DeviceInfo | null) => {
+      if (activity.getSnapshot()) return;
       const requestId = ++pairingRequestId.current;
       clearPairingModalTimer();
       setShowPairingModal(false);
@@ -117,7 +119,7 @@ export const Device = ({
             selectDevice(null);
           }
         }
-        if (devices.length > 0) {
+        if (devices.length > 0 && !selectedDevice && !activity.getSnapshot()) {
           const devicesWithPairing = await Promise.all(
             devices.map(async (device) => {
               const hasPairing = await invoke<boolean>("has_stored_rppairing", {
@@ -154,7 +156,7 @@ export const Device = ({
       },
       error: (e) => err(t("device.unable_load_devices_prefix"), e),
     });
-  }, [setDevices, selectDevice, t]);
+  }, [setDevices, selectDevice, selectedDevice, t]);
   useEffect(() => {
     loadDevices();
   }, [loadDevices]);
@@ -209,7 +211,7 @@ export const Device = ({
               key={device.id}
               className={"device-card card" + (isActive ? " active" : "")}
               onClick={() => selectDevice(device)}
-              disabled={waitingToPair !== null}
+              disabled={waitingToPair !== null || busy !== null}
             >
               <div className="device-meta">
                 <span className="device-name">{device.name}</span>

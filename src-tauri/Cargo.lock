@@ -90,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "anderstore-installer"
-version = "2.3.3"
+version = "2.3.7"
 dependencies = [
  "chrono",
  "futures",

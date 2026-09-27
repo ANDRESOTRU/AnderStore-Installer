@@ -1,5 +1,5 @@
 import "./Certificates.css";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../activity";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useError } from "../ErrorContext";

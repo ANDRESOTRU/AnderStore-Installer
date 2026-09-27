@@ -17,6 +17,10 @@ jobs:
         with:
           bun-version: latest
       - run: bun i --frozen-lockfile
+      - name: Behavior tests
+        run: bun run test
+      - name: Check project versions
+        run: node scripts/check-version.mjs
       - name: Type check
         run: bunx tsc --noEmit
       - name: Build frontend

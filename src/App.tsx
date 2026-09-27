@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { DeviceInfo } from "./Device";
 import { HELP_URL, Wizard } from "./Wizard";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, activity, useActivity } from "./activity";
+import { invoke as rawInvoke } from "@tauri-apps/api/core";
+import { UpdateCard } from "./components/UpdateCard";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   installAnderStoreOperation,
@@ -19,7 +21,7 @@ import { AppIds } from "./pages/AppIds";
 import { Settings } from "./pages/Settings";
 import { Pairing } from "./pages/Pairing";
 import { getVersion } from "@tauri-apps/api/app";
-import { checkForUpdates } from "./update";
+import { updates } from "./update";
 import logo from "./anderstore.png";
 import { GlassCard } from "./components/GlassCard";
 import { useTranslation } from "react-i18next";
@@ -27,6 +29,7 @@ import { usePlatform } from "./PlatformContext";
 
 function App() {
   const { t } = useTranslation();
+  const busy = useActivity();
 
   const [operationState, setOperationState] = useState<OperationState | null>(
     null,
@@ -66,7 +69,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    void checkForUpdates(true);
+    void updates.check();
   }, []);
 
   const shortcutLabel = useCallback(
@@ -83,51 +86,57 @@ function App() {
       operation: Operation,
       params: { [key: string]: any },
     ): Promise<void> => {
-      setOperationState({
-        current: operation,
-        started: [],
-        failed: [],
-        completed: [],
-      });
-      return new Promise<void>(async (resolve, reject) => {
-        const unlistenFn = await listen<OperationUpdate>(
-          "operation_" + operation.id,
-          (event) => {
-            setOperationState((old) => {
-              if (old == null) return null;
-              if (event.payload.updateType === "started") {
-                return {
-                  ...old,
-                  started: [...old.started, event.payload.stepId],
-                };
-              } else if (event.payload.updateType === "finished") {
-                return {
-                  ...old,
-                  completed: [...old.completed, event.payload.stepId],
-                };
-              } else if (event.payload.updateType === "failed") {
-                return {
-                  ...old,
-                  failed: [
-                    ...old.failed,
-                    {
-                      stepId: event.payload.stepId,
-                      extraDetails: event.payload.extraDetails,
-                    },
-                  ],
-                };
-              }
-              return old;
-            });
-          },
-        );
+      return activity.run(operation.id, async () => {
+        setOperationState({
+          current: operation,
+          started: [],
+          failed: [],
+          completed: [],
+        });
+        let unlistenFn: (() => void) | undefined;
         try {
-          await invoke(operation.id + "_operation", params);
-          unlistenFn();
-          resolve();
+          unlistenFn = await listen<OperationUpdate>(
+            "operation_" + operation.id,
+            (event) => {
+              setOperationState((old) => {
+                if (old == null) return null;
+                if (event.payload.updateType === "started") {
+                  return {
+                    ...old,
+                    started: [...old.started, event.payload.stepId],
+                  };
+                } else if (event.payload.updateType === "finished") {
+                  return {
+                    ...old,
+                    completed: [...old.completed, event.payload.stepId],
+                  };
+                } else if (event.payload.updateType === "failed") {
+                  return {
+                    ...old,
+                    failed: [
+                      ...old.failed,
+                      {
+                        stepId: event.payload.stepId,
+                        extraDetails: event.payload.extraDetails,
+                      },
+                    ],
+                  };
+                }
+                return old;
+              });
+            },
+          );
+          await rawInvoke(operation.id + "_operation", params);
         } catch (e) {
-          unlistenFn();
-          reject(e);
+          setOperationState((old) => {
+            if (!old || old.failed.length) return old;
+            const stepId = operation.steps.find((step) => !old.completed.includes(step.id))?.id ?? operation.steps[0].id;
+            return { ...old, started: [...new Set([...old.completed, stepId])],
+              failed: [{ stepId, extraDetails: { type: "misc", message: String(e) } }] };
+          });
+          throw e;
+        } finally {
+          unlistenFn?.();
         }
       });
     },
@@ -148,7 +157,7 @@ function App() {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key === undefined) return;
+      if (event.key === undefined || activity.getSnapshot()) return;
       const key = event.key.toLowerCase();
       const primaryPressed = platform === "mac" ? event.metaKey : event.ctrlKey;
       if (!primaryPressed) return;
@@ -193,7 +202,8 @@ function App() {
         <div className="header-actions">
           <button
             className="toolbar-button"
-            onClick={() => void checkForUpdates(false)}
+            disabled={busy === "update"}
+            onClick={() => void updates.check(true)}
           >
             {t("update.check")}
           </button>
@@ -213,7 +223,10 @@ function App() {
         </div>
       </header>
       <div className="workspace-body wizard-layout">
+        <UpdateCard />
         <Wizard
+          busy={busy !== null}
+          openPairing={() => { if (ensureSelectedDevice()) setOpenModal("pairing"); }}
           loggedInAs={loggedInAs}
           setLoggedInAs={setLoggedInAs}
           noKeyringAvailable={noKeyringAvailable}
@@ -229,77 +242,79 @@ function App() {
             })
           }
         />
-        <details className="advanced">
-          <summary>{t("wizard.advanced")}</summary>
-          <div className="advanced-content">
-            <div className="workspace-list">
-              <button
-                className="workspace-list-item"
-                onClick={() => {
-                  if (!ensureSelectedDevice()) return;
-                  setOpenModal("pairing");
-                }}
-              >
-                {t("app.manage_pairing_file")}{" "}
-                <span aria-hidden="true">{shortcutLabel("⌘P", "Ctrl+P")}</span>
-              </button>
-              <button
-                className="workspace-list-item"
-                onClick={() => {
-                  if (!ensuredLoggedIn()) return;
-                  setOpenModal("certificates");
-                }}
-              >
-                {t("app.certificates")}{" "}
-                <span aria-hidden="true">
-                  {shortcutLabel("⌘⇧C", "Ctrl+Shift+C")}
-                </span>
-              </button>
-              <button
-                className="workspace-list-item"
-                onClick={() => {
-                  if (!ensuredLoggedIn()) return;
-                  setOpenModal("appids");
-                }}
-              >
-                {t("app.app_ids")}{" "}
-                <span aria-hidden="true">
-                  {shortcutLabel("⌘⇧A", "Ctrl+Shift+A")}
-                </span>
-              </button>
-            </div>
-            <GlassCard className="panel about-panel">
-              <h3 style={{ marginTop: 0 }}>{t("about.title")}</h3>
-              <p className="muted-text">
-                AnderStore Installer · ANDRESOT · {t("version")} {version}
-              </p>
+        <fieldset disabled={busy !== null} className="operation-fieldset">
+          <details className="advanced">
+            <summary>{t("wizard.advanced")}</summary>
+            <div className="advanced-content">
               <div className="workspace-list">
-                <button className="workspace-list-item" onClick={() => openUrl("https://andresot.ru")}>
-                  andresot.ru
+                <button
+                  className="workspace-list-item"
+                  onClick={() => {
+                    if (!ensureSelectedDevice()) return;
+                    setOpenModal("pairing");
+                  }}
+                >
+                  {t("app.manage_pairing_file")}{" "}
+                  <span aria-hidden="true">{shortcutLabel("⌘P", "Ctrl+P")}</span>
                 </button>
                 <button
                   className="workspace-list-item"
-                  onClick={() => openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer")}
+                  onClick={() => {
+                    if (!ensuredLoggedIn()) return;
+                    setOpenModal("certificates");
+                  }}
                 >
-                  {t("about.source")}
+                  {t("app.certificates")}{" "}
+                  <span aria-hidden="true">
+                    {shortcutLabel("⌘⇧C", "Ctrl+Shift+C")}
+                  </span>
                 </button>
-                <button className="workspace-list-item" onClick={() => openUrl("https://github.com/nab138/iloader")}>
-                  {t("about.licenses")}
+                <button
+                  className="workspace-list-item"
+                  onClick={() => {
+                    if (!ensuredLoggedIn()) return;
+                    setOpenModal("appids");
+                  }}
+                >
+                  {t("app.app_ids")}{" "}
+                  <span aria-hidden="true">
+                    {shortcutLabel("⌘⇧A", "Ctrl+Shift+A")}
+                  </span>
                 </button>
               </div>
-              <p className="muted-text">{t("about.licensesDesc")}</p>
-            </GlassCard>
-            <GlassCard className="panel settings-panel">
-              <Settings
-                ensureSelectedDevice={ensureSelectedDevice}
-                setSelectedDevice={setSelectedDevice}
-                platform={platform}
-                shortcutLabel={shortcutLabel}
-                checkKeyring={checkKeyring}
-              />
-            </GlassCard>
-          </div>
-        </details>
+              <GlassCard className="panel about-panel">
+                <h3 style={{ marginTop: 0 }}>{t("about.title")}</h3>
+                <p className="muted-text">
+                  AnderStore Installer · ANDRESOT · {t("version")} {version}
+                </p>
+                <div className="workspace-list">
+                  <button className="workspace-list-item" onClick={() => openUrl("https://andresot.ru")}>
+                    andresot.ru
+                  </button>
+                  <button
+                    className="workspace-list-item"
+                    onClick={() => openUrl("https://github.com/ANDRESOTRU/AnderStore-Installer")}
+                  >
+                    {t("about.source")}
+                  </button>
+                  <button className="workspace-list-item" onClick={() => openUrl("https://github.com/nab138/iloader")}>
+                    {t("about.licenses")}
+                  </button>
+                </div>
+                <p className="muted-text">{t("about.licensesDesc")}</p>
+              </GlassCard>
+              <GlassCard className="panel settings-panel">
+                <Settings
+                  ensureSelectedDevice={ensureSelectedDevice}
+                  setSelectedDevice={setSelectedDevice}
+                  platform={platform}
+                  shortcutLabel={shortcutLabel}
+                  checkKeyring={checkKeyring}
+                />
+              </GlassCard>
+            </div>
+          </details>
+        </fieldset>
         {operationState && (
           <OperationView
             operationState={operationState}
@@ -311,13 +326,13 @@ function App() {
         isOpen={openModal === "certificates"}
         close={() => setOpenModal(null)}
       >
-        <Certificates />
+        <fieldset disabled={busy !== null} className="operation-fieldset"><Certificates /></fieldset>
       </Modal>
       <Modal isOpen={openModal === "appids"} close={() => setOpenModal(null)}>
-        <AppIds />
+        <fieldset disabled={busy !== null} className="operation-fieldset"><AppIds /></fieldset>
       </Modal>
       <Modal isOpen={openModal === "pairing"} close={() => setOpenModal(null)}>
-        <Pairing />
+        <fieldset disabled={busy !== null} className="operation-fieldset"><Pairing /></fieldset>
       </Modal>
     </main>
   );

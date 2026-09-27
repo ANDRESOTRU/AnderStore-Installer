@@ -242,7 +242,7 @@ export default ({
       )}
       {done && (
         <button style={{ width: "100%" }} onClick={closeMenu}>
-          {t("common.dismiss")}
+          {t(!opFailed && operation.id === "install_sidestore" ? "guide.continue" : "common.dismiss")}
         </button>
       )}
     </Modal>

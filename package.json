@@ -1,7 +1,7 @@
 {
   "name": "anderstore-installer",
   "private": true,
-  "version": "2.3.3",
+  "version": "2.3.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "bump-patch": "bunx tauri-version --no-git --no-lock patch",
     "bump-minor": "bunx tauri-version --no-git --no-lock minor",
-    "bump-major": "bunx tauri-version --no-git --no-lock major"
+    "bump-major": "bunx tauri-version --no-git --no-lock major",
+    "test": "node --test tests/run.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

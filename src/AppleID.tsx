@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./AppleID.css";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, useActivity } from "./activity";
 import { emit, listen } from "@tauri-apps/api/event";
 import { load } from "@tauri-apps/plugin-store";
 import { Modal } from "./components/Modal";
@@ -22,6 +22,7 @@ export const AppleID = ({
   noKeyringAvailable: boolean;
 }) => {
   const { t } = useTranslation();
+  const busy = useActivity();
   const [storedIds, setStoredIds] = useState<string[]>([]);
   const [forceUpdateIds, setForceUpdateIds] = useState<number>(0);
   const [emailInput, setEmailInput] = useState<string>("");
@@ -100,6 +101,7 @@ export const AppleID = ({
   return (
     <>
       <h2 style={{ marginTop: 0 }}>{t("apple_id.title")}</h2>
+      <fieldset className="operation-fieldset" disabled={busy !== null}>
       <div className="credentials-container">
         {loggedInAs && (
           <div className="logged-in-as card green">
@@ -266,6 +268,7 @@ export const AppleID = ({
           </div>
         )}
       </div>
+      </fieldset>
       <Modal sizeFit isOpen={tfaOpen} zIndex={2000}>
         <h2>{t("apple_id.two_factor_title")}</h2>
         <p>{t("apple_id.two_factor_prompt")}</p>

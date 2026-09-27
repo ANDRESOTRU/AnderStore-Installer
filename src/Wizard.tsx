@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { invoke } from "./activity";
+import { StoreContext } from "./StoreContext";
+import { createReceipt, completeInstallation, readReceipts, withReceipt, type InstallationReceipt, type ReceiptMap } from "./installationReceipt";
+import { InstallationGuide } from "./components/InstallationGuide";
+import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import "./Wizard.css";
@@ -9,12 +13,13 @@ import { GlassCard } from "./components/GlassCard";
 
 export const HELP_URL = "https://store.andresot.uk/help";
 const ITUNES_URL = "https://apple.co/ms:iTunes";
-const LOCALDEVVPN_HELP_URL = `${HELP_URL}#localdevvpn`;
 
 type StepId = "prepare" | "connect" | "account" | "install" | "finish";
 const STEPS: StepId[] = ["prepare", "connect", "account", "install", "finish"];
 
 type Props = {
+  busy: boolean;
+  openPairing: () => void;
   loggedInAs: string | null;
   setLoggedInAs: (value: string | null) => void;
   noKeyringAvailable: boolean;
@@ -27,6 +32,8 @@ type Props = {
 const open = (url: string) => openUrl(url).catch((e) => console.error(e));
 
 export const Wizard = ({
+  busy,
+  openPairing,
   loggedInAs,
   setLoggedInAs,
   noKeyringAvailable,
@@ -40,6 +47,16 @@ export const Wizard = ({
   const [driverStatus, setDriverStatus] = useState<"checking" | "ok" | "missing">("checking");
   const [installing, setInstalling] = useState(false);
   const [installFailed, setInstallFailed] = useState(false);
+  const installingRef = useRef(false);
+  const { store } = useContext(StoreContext);
+  const [receipt, setReceipt] = useState<InstallationReceipt | null>(null);
+  const [receipts, setReceipts] = useState<ReceiptMap>({});
+
+  useEffect(() => {
+    void store?.get<unknown>("installationReceipts").then((saved) => {
+      setReceipts(readReceipts(saved));
+    }).catch(() => toast.error(t("guide.load_failed")));
+  }, [store, t]);
 
   const index = STEPS.indexOf(step);
 
@@ -63,14 +80,26 @@ export const Wizard = ({
     (step === "account" && loggedInAs !== null);
 
   const runInstall = async () => {
+    if (busy || installingRef.current || !selectedDevice || !loggedInAs) return;
+    const snapshot = createReceipt(selectedDevice, loggedInAs);
+    installingRef.current = true;
     setInstalling(true);
     setInstallFailed(false);
     try {
-      await install();
+      const installed = await completeInstallation(snapshot, install);
+      setReceipt(installed);
+      const next = withReceipt(receipts, installed);
+      setReceipts(next);
       setStep("finish");
+      try {
+        if (!store) throw new Error("Local storage unavailable");
+        await store.set("installationReceipts", next);
+        await store.save();
+      } catch { toast.error(t("guide.save_failed")); }
     } catch {
       setInstallFailed(true);
     } finally {
+      installingRef.current = false;
       setInstalling(false);
     }
   };
@@ -143,6 +172,7 @@ export const Wizard = ({
         {step === "account" && (
           <div className="wizard-body">
             <ul className="wizard-notes">
+              <li>{t("guide.account_explanation")}</li>
               <li>{t("wizard.account.note_free")}</li>
               <li>{t("wizard.account.note_privacy")}</li>
               <li>{t("wizard.account.note_code")}</li>
@@ -157,6 +187,10 @@ export const Wizard = ({
 
         {step === "install" && (
           <div className="wizard-body">
+            <div className="signing-account">
+              <strong>{t("guide.install_account")}</strong><span>{loggedInAs}</span>
+              <p>{t("guide.same_account")}</p>
+            </div>
             <ul className="wizard-notes">
               <li>{t("wizard.install.note_device", { name: selectedDevice?.name ?? "iPhone" })}</li>
               <li>{t("wizard.install.note_cable")}</li>
@@ -166,7 +200,7 @@ export const Wizard = ({
             )}
             <button
               className="primary-install wizard-big"
-              disabled={installing}
+              disabled={installing || busy || !selectedDevice || !loggedInAs}
               onClick={runInstall}
             >
               {installing ? t("wizard.install.installing") : t("app.install_anderstore")}
@@ -174,37 +208,17 @@ export const Wizard = ({
           </div>
         )}
 
-        {step === "finish" && (
+        {step === "finish" && receipt && (
           <div className="wizard-body">
-            <div className="wizard-status ok">🎉 {t("wizard.finish.installed")}</div>
-            <ol className="wizard-checklist">
-              <li>
-                <strong>{t("wizard.finish.devmode_title")}</strong>
-                <span>{t("wizard.finish.devmode_path")}</span>
-              </li>
-              <li>
-                <strong>{t("wizard.finish.trust_title")}</strong>
-                <span>{t("wizard.finish.trust_path")}</span>
-              </li>
-              <li>
-                <strong>{t("wizard.finish.vpn_title")}</strong>
-                <span>{t("wizard.finish.vpn_path")}</span>
-                <button className="link-button" onClick={() => open(LOCALDEVVPN_HELP_URL)}>
-                  {t("wizard.finish.vpn_open")}
-                </button>
-              </li>
-              <li>
-                <strong>{t("wizard.finish.open_title")}</strong>
-                <span>{t("wizard.finish.open_path")}</span>
-              </li>
-            </ol>
-            <p className="wizard-hint">{t("wizard.finish.weekly")}</p>
+            <div className="wizard-status ok">✓ {t("wizard.finish.installed")}</div>
+            <InstallationGuide receipt={receipt} openPairing={openPairing}
+              canPair={!busy && selectedDevice?.udid === receipt.deviceId} />
           </div>
         )}
 
         <div className="wizard-footer">
           {index > 0 && step !== "finish" ? (
-            <button disabled={installing} onClick={() => setStep(STEPS[index - 1])}>
+            <button disabled={installing || busy} onClick={() => setStep(STEPS[index - 1])}>
               {t("wizard.back")}
             </button>
           ) : (
@@ -216,20 +230,27 @@ export const Wizard = ({
           {step !== "install" && step !== "finish" && (
             <button
               className="primary-install"
-              disabled={!canContinue}
+              disabled={!canContinue || busy}
               onClick={() => setStep(STEPS[index + 1])}
             >
               {t("wizard.next")}
             </button>
           )}
           {step === "finish" && (
-            <button onClick={() => setStep("connect")}>{t("wizard.finish.again")}</button>
+            <button disabled={busy || installing} onClick={() => { setReceipt(null); setStep("connect"); }}>{t("wizard.finish.again")}</button>
           )}
         </div>
         {!canContinue && step !== "install" && step !== "finish" && (
           <p className="wizard-hint right">{t(`wizard.${step}.waiting`)}</p>
         )}
       </GlassCard>
+      {Object.keys(receipts).length > 0 && step !== "finish" && <details className="saved-guides">
+        <summary>{t("guide.saved")}</summary>
+        {Object.values(receipts).map((saved) => <details key={saved.deviceId}>
+          <summary>{saved.deviceName} · {saved.appleId}</summary>
+          <InstallationGuide receipt={saved} openPairing={openPairing} canPair={!busy && selectedDevice?.udid === saved.deviceId} />
+        </details>)}
+      </details>}
     </div>
   );
 };
