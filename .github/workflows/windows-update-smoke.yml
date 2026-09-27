@@ -1,0 +1,27 @@
+name: "Verify real Windows self-update"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Published version to update to"
+        type: string
+        default: "2.3.8"
+        required: true
+jobs:
+  installed-update:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify installed app update and restart
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: node scripts/test-windows-update.mjs "$env:EXPECTED_VERSION"
+      - name: Preserve actual Windows update evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-self-update-evidence
+          path: out/windows-update-smoke
