@@ -61,6 +61,10 @@ cargo test --locked
 
 Для проверки реального обновления: установить предыдущую версию с ключом AnderStore на тестовой Windows, выпустить новую подписанную версию, запустить проверку из программы, нажать «Обновить программу» и убедиться, что после перезапуска отображается новая версия, а сохранённые памятки доступны. Подмена API в тестах не заменяет этот сценарий.
 
+Автоматизированный сценарий: **Actions → Verify real Windows self-update → Run workflow**. Он устанавливает выпущенную 2.3.7 под отдельным обычным пользователем на одноразовой Windows-машине, нажимает кнопку обновления в настоящем WebView и проверяет версию после автоматического перезапуска и две сохранённые памятки. Установка, проверка подписи и перезапуск используют настоящий Tauri Updater. Артефакт `windows-self-update-evidence` содержит снимки экранов, журналы и `result.json`; полный сценарий подтверждён только при успешном завершении задания.
+
+**Real Windows verification:** run **Verify real Windows self-update** in Actions after publishing a signed version. This exercises the released 2.3.7 installer, the actual in-app update button, native signature validation, NSIS installation, automatic restart and two saved device guides under a disposable standard Windows account. Inspect the `windows-self-update-evidence` artifact; mocked API tests alone do not confirm self-update.
+
 ## Лицензия
 
 Код распространяется по лицензии **MIT** — см. файл [LICENSE](LICENSE).
