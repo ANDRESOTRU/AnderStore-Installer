@@ -18,6 +18,7 @@ import {
   parseLinkToken,
 } from "./errors";
 import { usePlatform } from "./PlatformContext";
+import { isAnisetteConnectionError, isAppleRateLimitError, isCertificateLimitError } from "./certificateError";
 
 export const ErrorContext = createContext<{
   err: (msg: string, err: AppError) => string;
@@ -39,8 +40,8 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
   const { platform } = usePlatform();
 
   const getSuggestions = useCallback(
-    (type: ErrorVariant): string[] => {
-      return getErrorSuggestions(t, type, platform, anisetteServer);
+    (type: ErrorVariant, message: string): string[] => {
+      return getErrorSuggestions(t, type, platform, anisetteServer, message);
     },
     [anisetteServer, t, platform],
   );
@@ -51,14 +52,27 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({
       setSuggestions([]);
       return;
     }
-    setSuggestions(getSuggestions(error.type));
+    setSuggestions(getSuggestions(error.type, error.message));
+    setSimpleError(null);
+    if (isAnisetteConnectionError(error.message)) {
+      setSimpleError(t("apple_id.anisette_connection_title"));
+      return;
+    }
+    if (isAppleRateLimitError(error.message)) {
+      setSimpleError(t("apple_id.rate_limit_title"));
+      return;
+    }
+    if (isCertificateLimitError(error.message)) {
+      setSimpleError(t("apple_id.max_certs_title"));
+      return;
+    }
     // a little bit gross but it gets the job done.
     let lines =
       error?.message.split("\n").filter((line) => line.includes("●")) ?? [];
     if (lines.length > 0) {
       setSimpleError(lines[lines.length - 1].replace(/●\s*/, "").trim());
     }
-  }, [error, getSuggestions]);
+  }, [error, getSuggestions, t]);
 
   return (
     <ErrorContext.Provider

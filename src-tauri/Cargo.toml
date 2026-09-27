@@ -1,6 +1,6 @@
 [package]
 name = "anderstore-installer"
-version = "2.3.8"
+version = "2.3.9"
 description = "AnderStore Installer"
 authors = ["nab138", "ANDRESOTRU"]
 edition = "2024"

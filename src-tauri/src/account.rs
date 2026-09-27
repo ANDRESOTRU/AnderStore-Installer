@@ -223,16 +223,17 @@ async fn login(
                     machine_id: cert.machine_id.clone(),
                 })
                 .collect();
-            window_clone
-                .emit("max-certs-reached", cert_infos)
-                .expect("Failed to emit max-certs-reached event");
-
             let (tx, rx) = std::sync::mpsc::channel::<Option<Vec<String>>>();
             let handler_id = window_clone.listen("max-certs-response", move |event| {
                 let certs = event.payload();
                 let certs = serde_json::from_str::<Option<Vec<String>>>(certs).unwrap_or(None);
                 let _ = tx.send(certs);
             });
+
+            if window_clone.emit("max-certs-reached", cert_infos).is_err() {
+                window_clone.unlisten(handler_id);
+                return None;
+            }
 
             let result = rx.recv_timeout(Duration::from_secs(300));
             window_clone.unlisten(handler_id);

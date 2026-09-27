@@ -26,6 +26,7 @@ import logo from "./anderstore.png";
 import { GlassCard } from "./components/GlassCard";
 import { useTranslation } from "react-i18next";
 import { usePlatform } from "./PlatformContext";
+import { CertificatePrompt } from "./components/CertificatePrompt";
 
 function App() {
   const { t } = useTranslation();
@@ -186,6 +187,7 @@ function App() {
 
   return (
     <main className="workspace">
+      <CertificatePrompt />
       <header className="workspace-header">
         <div className="header-left">
           <div className="title-block">

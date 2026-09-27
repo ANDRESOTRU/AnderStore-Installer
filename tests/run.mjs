@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerBehaviorTests } from "./behavior.mjs";
 import "./release.test.mjs";
+import { registerAppleErrorTests } from "./apple-errors.mjs";
 
 // Compile the production controller with the project's existing TypeScript dependency.
 const prefix = join(tmpdir(), "anderstore-tests-");
@@ -14,8 +15,8 @@ process.on("exit", () => {
   rmSync(directory, { recursive: true, force: true });
 });
 const modules = {};
-for (const name of ["activityGate", "updateController", "installationReceipt"]) {
-  const source = readFileSync(`src/${name}.ts`, "utf8");
+for (const name of ["activityGate", "updateController", "installationReceipt", "certificateError", "errors"]) {
+  const source = readFileSync(`src/${name}.${name === "errors" ? "tsx" : "ts"}`, "utf8");
   const { outputText } = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022,
   } });
@@ -24,3 +25,4 @@ for (const name of ["activityGate", "updateController", "installationReceipt"]) 
   Object.assign(modules, await import(pathToFileURL(path).href));
 }
 registerBehaviorTests(modules);
+registerAppleErrorTests(modules);

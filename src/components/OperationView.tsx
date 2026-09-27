@@ -13,6 +13,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { ErrorVariant, getErrorSuggestions, parseLinkToken } from "../errors";
 import { useStore } from "../StoreContext";
 import { usePlatform } from "../PlatformContext";
+import { isAnisetteConnectionError, isAppleRateLimitError, isCertificateLimitError } from "../certificateError";
 
 export default ({
   operationState,
@@ -40,8 +41,8 @@ export default ({
   const [underage, setUnderage] = useState<boolean>(false);
 
   const getSuggestions = useCallback(
-    (type: ErrorVariant): string[] => {
-      return getErrorSuggestions(t, type, platform, anisetteServer);
+    (type: ErrorVariant, message: string): string[] => {
+      return getErrorSuggestions(t, type, platform, anisetteServer, message);
     },
     [anisetteServer, t, platform],
   );
@@ -53,7 +54,7 @@ export default ({
         if (f.extraDetails.type === "underage") {
           setUnderage(true);
         }
-        for (const suggestion of getSuggestions(f.extraDetails.type)) {
+        for (const suggestion of getSuggestions(f.extraDetails.type, f.extraDetails.message)) {
           suggestionSet.add(suggestion);
         }
       }
@@ -99,6 +100,15 @@ export default ({
                 .filter((line) => line.includes("●")) ?? [];
             let errorShort =
               lines[lines.length - 1]?.replace(/●\s*/, "").trim() ?? "";
+            if (failed && isCertificateLimitError(failed.extraDetails.message)) {
+              errorShort = t("apple_id.max_certs_title");
+            }
+            if (failed && isAppleRateLimitError(failed.extraDetails.message)) {
+              errorShort = t("apple_id.rate_limit_title");
+            }
+            if (failed && isAnisetteConnectionError(failed.extraDetails.message)) {
+              errorShort = t("apple_id.anisette_connection_title");
+            }
 
             return (
               <div className="operation-step" key={step.id}>

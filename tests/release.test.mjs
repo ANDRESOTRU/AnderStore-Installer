@@ -60,7 +60,7 @@ test("verify both Minisign algorithms and reject tampering or different key", ()
 test("Russian and English guide/update strings contain matching keys and interpolation", () => {
   const ru = JSON.parse(readFileSync("src/locales/ru.json", "utf8"));
   const en = JSON.parse(readFileSync("src/locales/en.json", "utf8"));
-  for (const section of ["guide", "update"]) {
+  for (const section of ["guide", "update", "apple_id"]) {
     assert.deepEqual(Object.keys(ru[section]).sort(), Object.keys(en[section]).sort());
     for (const key of Object.keys(ru[section])) {
       assert.deepEqual(ru[section][key].match(/\{\{\w+\}\}/g), en[section][key].match(/\{\{\w+\}\}/g));

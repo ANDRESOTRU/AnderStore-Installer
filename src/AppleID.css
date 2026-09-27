@@ -185,7 +185,7 @@
 }
 
 .cert-item input {
-  pointer-events: none;
+  flex: 0 0 auto;
 }
 
 .cert-item label {

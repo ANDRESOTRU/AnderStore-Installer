@@ -70,7 +70,14 @@
     "valid_6digit": "Please enter a valid 6-digit code.",
     "submit": "Submit",
     "max_certs_title": "Maximum certificates reached",
-    "max_certs_desc": "AnderStore Installer will revoke your existing certificates and generate a new one.",
+    "max_certs_desc": "Apple will not create another certificate for this Apple ID. Select one unused certificate below to make room and continue installation.",
+    "cert_revoke_warning": "Apps on other iPhones signed with the selected certificate may stop opening and need to be installed again. If you are unsure which certificate to revoke, choose Cancel and use another Apple ID, then use that same account in AnderStore on the iPhone.",
+    "cert_none_available": "Apple returned no certificates available for revocation. Cancel installation and try later or use another Apple ID.",
+    "cert_unknown_machine": "Computer not specified",
+    "cert_revoke_selected": "Revoke selected and continue",
+    "cert_response_failed": "Could not send your answer to the installer. Please try again.",
+    "rate_limit_title": "Apple has temporarily limited sign-in requests",
+    "anisette_connection_title": "Could not reach the sign-in preparation server",
     "hide_certificate_list": "Hide certificate list",
     "choose_what_to_revoke": "Choose what to revoke",
     "continue": "Continue",
@@ -197,6 +204,16 @@
     "unknown": "Unknown",
     "suggestions_heading": "Suggestions",
     "suggestions": {
+      "apple_rate_limit": [
+        "Apple returned 429 Too Many Requests. Stop repeated sign-in attempts and try once later. This response does not provide a waiting period.",
+        "If using a VPN, check whether other devices are signing in through it at the same time. This error does not identify whether the limit applies to your Apple ID or a shared IP address.",
+        "This response does not confirm an incorrect password. Changing your password or revoking certificates will not resolve a 429 response."
+      ],
+      "certificate_limit": [
+        "This Apple ID has reached Apple's signing certificate limit (7460). Close the error and retry installation, then select one unused certificate in the prompt and confirm revocation.",
+        "Apps signed with a revoked certificate may need to be installed again. Do not revoke a certificate used on another iPhone unless you are prepared to reinstall those apps.",
+        "You can cancel installation and use another Apple ID. After installation, sign in with that same Apple ID in AnderStore on the iPhone."
+      ],
       "underage": [
         "Your Apple ID may be below the required age to use developer services."
       ],
@@ -205,7 +222,6 @@
         "Visit ((link:https://iforgot.apple.com/)) to unlock your account."
       ],
       "auth": [
-        "If you see 429 or \"Too Many Requests\", Apple has temporarily limited sign-ins. Wait 30-60 minutes and try once.",
         "Make sure your credentials are correct and try again, even if they were correct.",
         "If the issue persists, try using another Apple ID.",
         "Security Key 2FA is not supported. If possible, use an Apple ID with no 2FA or with trusted device 2FA."
@@ -243,7 +259,9 @@
       ],
       "anisette": [
         "Make sure this computer is connected to the internet.",
-        "Try again in a minute — the sign-in server may be temporarily unavailable.",
+        "The anisette server could not provide sign-in data. This does not confirm an incorrect Apple ID password.",
+        "Check your connection and the server's availability. A temporary server outage, network, VPN or secure connection issue may cause this; the log does not identify the cause.",
+        "Try signing in once when the connection recovers. If Apple returns 429, stop repeated attempts and try later.",
         "Check that ((link:{{anisetteServerUrl}})) opens in your browser."
       ],
       "keyring": [

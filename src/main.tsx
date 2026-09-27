@@ -22,6 +22,6 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         </ErrorProvider>
       </StoreProvider>
     </PlatformProvider>
-    <Toaster richColors expand />
+    <Toaster richColors expand style={{ zIndex: 900 }} />
   </React.StrictMode>,
 );

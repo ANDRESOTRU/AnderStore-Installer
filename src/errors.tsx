@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { isAppleRateLimitError, isCertificateLimitError } from "./certificateError";
 
 export const errorSuggestionKeys = {
   underage: ["error.suggestions.underage"],
@@ -119,7 +120,14 @@ export const getErrorSuggestions = (
   type: ErrorVariant,
   platform: "mac" | "windows" | "linux",
   anisetteServer: string,
+  message = "",
 ): string[] => {
+  if (isAppleRateLimitError(message)) {
+    return getSuggestionBlock(t, "error.suggestions.apple_rate_limit", platform, anisetteServer);
+  }
+  if (isCertificateLimitError(message)) {
+    return getSuggestionBlock(t, "error.suggestions.certificate_limit", platform, anisetteServer);
+  }
   return dedupeSuggestions(
     errorSuggestionKeys[type].flatMap((key) =>
       getSuggestionBlock(t, key, platform, anisetteServer),

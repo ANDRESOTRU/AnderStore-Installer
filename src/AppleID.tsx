@@ -7,7 +7,6 @@ import { Modal } from "./components/Modal";
 import { toast } from "sonner";
 import { useStore } from "./StoreContext";
 import { useError } from "./ErrorContext";
-import { Certificate } from "./pages/Certificates";
 import { useTranslation } from "react-i18next";
 
 const storePromise = load("data.json");
@@ -35,9 +34,6 @@ export const AppleID = ({
     "anisetteServer",
     "anisette.andresot.uk",
   );
-  const [certs, setCerts] = useState<Certificate[] | null>(null);
-  const [selectedSerials, setSelectedSerials] = useState<string[]>([]);
-  const [chooseCertsOpen, setChooseCertsOpen] = useState<boolean>(false);
   const { err } = useError();
 
   useEffect(() => {
@@ -55,10 +51,6 @@ export const AppleID = ({
     getStoredIds();
   }, [forceUpdateIds]);
 
-  useEffect(() => {
-    setSelectedSerials(certs?.map((c) => c.serialNumber) ?? []);
-  }, [certs]);
-
   const listenerAdded = useRef<boolean>(false);
   const unlisten = useRef<() => void>(() => {});
 
@@ -74,27 +66,6 @@ export const AppleID = ({
     }
     return () => {
       unlisten.current();
-    };
-  }, []);
-
-  const certListenerAdded = useRef<boolean>(false);
-  const certUnlisten = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    if (!certListenerAdded.current) {
-      (async () => {
-        const unlistenFn = await listen<Certificate[]>(
-          "max-certs-reached",
-          (certs) => {
-            setCerts(certs.payload);
-          },
-        );
-        certUnlisten.current = unlistenFn;
-      })();
-      certListenerAdded.current = true;
-    }
-    return () => {
-      certUnlisten.current();
     };
   }, []);
 
@@ -294,75 +265,7 @@ export const AppleID = ({
           <button type="submit">{t("apple_id.submit")}</button>
         </form>
       </Modal>
-      <Modal sizeFit isOpen={certs !== null} zIndex={2000}>
-        <h2 className="cert-header">{t("apple_id.max_certs_title")}</h2>
-        <p className="certs-desc">{t("apple_id.max_certs_desc")}</p>
-        <p
-          className="certs-see"
-          role="button"
-          tabIndex={0}
-          onClick={() => setChooseCertsOpen((v) => !v)}
-        >
-          {chooseCertsOpen
-            ? t("apple_id.hide_certificate_list")
-            : t("apple_id.choose_what_to_revoke")}
-        </p>
-        {chooseCertsOpen && certs && (
-          <div className="certs-list">
-            {certs.map((cert) => (
-              <div
-                key={cert.serialNumber}
-                className="cert-item"
-                onClick={() => {
-                  setSelectedSerials((prev) => {
-                    if (prev.includes(cert.serialNumber)) {
-                      return prev.filter((s) => s !== cert.serialNumber);
-                    } else {
-                      return [...prev, cert.serialNumber];
-                    }
-                  });
-                }}
-              >
-                <input
-                  type="checkbox"
-                  id={cert.serialNumber}
-                  name={cert.serialNumber}
-                  value={cert.serialNumber}
-                  checked={selectedSerials.includes(cert.serialNumber)}
-                />
-                <label htmlFor={cert.serialNumber}>
-                  {cert.name} - {cert.machineName}
-                </label>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="certs-buttons">
-          <button
-            className="action-button primary"
-            onClick={async () => {
-              await emit(
-                "max-certs-response",
-                selectedSerials.length > 0 ? selectedSerials : null,
-              );
-              setCerts(null);
-              setChooseCertsOpen(false);
-            }}
-          >
-            {t("apple_id.continue")}
-          </button>
-          <button
-            className="action-button danger"
-            onClick={async () => {
-              await emit("max-certs-response", null);
-              setCerts(null);
-              setChooseCertsOpen(false);
-            }}
-          >
-            {t("common.cancel")}
-          </button>
-        </div>
-      </Modal>
+
     </>
   );
 };
