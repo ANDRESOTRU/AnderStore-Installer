@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, writeFileSync, existsSync, openSync, cpSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, cpSync } from "node:fs";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { verifySignature } from "./validate-updater.mjs";
@@ -54,10 +54,9 @@ const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
 }]));
 writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }));
 const port = 19227;
-const appLog = openSync(join(output, "app-output.txt"), "w");
 // GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
 // current WebView2 runtimes do not expose CDP from an elevated host.
-const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", executable], { detached: true, stdio: ["ignore", appLog, appLog], env: {
+const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", executable], { stdio: "inherit", env: {
   ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
 } });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
