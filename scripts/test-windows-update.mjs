@@ -18,7 +18,7 @@ async function until(task, label, timeout = 120000, interval = 500) {
   const deadline = Date.now() + timeout;
   let last;
   while (Date.now() < deadline) {
-    try { const result = await task(); if (result) return result; } catch (error) { last = error; }
+    try { const result = await task(); if (result) return result; } catch (error) { if (error?.fatal) throw error; last = error; }
     await pause(interval);
   }
   throw new Error(`Timed out: ${label}. ${last ?? ""}`);
@@ -39,9 +39,11 @@ const installer = Buffer.from(await (await get(oldPlatform.url)).arrayBuffer());
 verifySignature(installer, oldPlatform.signature, config.plugins.updater.pubkey);
 const setupPath = join(output, "baseline-setup.exe");
 writeFileSync(setupPath, installer);
-const install = spawnSync(setupPath, ["/S"], { timeout: 180000, windowsHide: true });
+const installationDirectory = join(process.env.RUNNER_TEMP, "anderstore-updater-smoke");
+assert.ok(!/\s/.test(installationDirectory), "CI installation directory must be unambiguous for runas");
+const install = spawnSync(setupPath, ["/S", `/D=${installationDirectory}`], { timeout: 180000, windowsHide: true });
 assert.equal(install.status, 0, "Baseline NSIS installation must succeed");
-const executable = join(process.env.LOCALAPPDATA, "AnderStore Installer", "anderstore-installer.exe");
+const executable = join(installationDirectory, "anderstore-installer.exe");
 assert.ok(existsSync(executable), "Test must run the installed app");
 console.log(`Installed baseline executable: ${executable}`);
 const preferencesPath = join(process.env.APPDATA, "uk.andresot.anderstore.installer", "preferences.json");
@@ -55,14 +57,19 @@ const port = 19227;
 const appLog = openSync(join(output, "app-output.txt"), "w");
 // GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
 // current WebView2 runtimes do not expose CDP from an elevated host.
-const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", `"${executable}"`], { detached: true, stdio: ["ignore", appLog, appLog], env: {
+const app = spawn("runas.exe", ["/env", "/trustlevel:0x20000", executable], { detached: true, stdio: ["ignore", appLog, appLog], env: {
   ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
 } });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
-app.on("exit", (code, signal) => console.log(`Baseline launcher exited: code=${code}, signal=${signal}`));
+let launchFailure;
+app.on("exit", (code, signal) => {
+  console.log(`Baseline launcher exited: code=${code}, signal=${signal}`);
+  if (code !== 0) { launchFailure = new Error(`Baseline launcher failed: ${code}`); launchFailure.fatal = true; }
+});
 app.unref();
 let client;
 async function connect() {
+  if (launchFailure) throw launchFailure;
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2000) })).json();
   const target = targets.find((target) => target.type === "page" && /tauri\.localhost/.test(target.url));
   if (!target) return;
