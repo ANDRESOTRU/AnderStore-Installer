@@ -1,12 +1,38 @@
 param([Parameter(Mandatory=$true)][string]$Executable, [string]$Arguments = '', [switch]$Wait)
 $ErrorActionPreference = 'Stop'
+if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This launcher is only for disposable GitHub Actions runners.' }
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 public static class StandardUserSmoke {
+  [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
+  static extern IntPtr OpenWindowStation(string name,bool inherit,uint access);
+  [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
+  static extern IntPtr OpenDesktop(string name,uint flags,bool inherit,uint access);
+  [DllImport("user32.dll",SetLastError=true)]
+  static extern bool GetUserObjectSecurity(IntPtr handle,ref uint info,byte[] descriptor,uint length,out uint needed);
+  [DllImport("user32.dll",SetLastError=true)]
+  static extern bool SetUserObjectSecurity(IntPtr handle,ref uint info,byte[] descriptor);
+  [DllImport("user32.dll")]
+  static extern bool CloseWindowStation(IntPtr handle);
+  [DllImport("user32.dll")]
+  static extern bool CloseDesktop(IntPtr handle);
+  static void GrantDesktopAccess(IntPtr handle,SecurityIdentifier sid,int mask) {
+    if(handle==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error());
+    uint info=4,needed;
+    GetUserObjectSecurity(handle,ref info,null,0,out needed);
+    var bytes=new byte[needed];
+    if(!GetUserObjectSecurity(handle,ref info,bytes,needed,out needed))throw new Win32Exception(Marshal.GetLastWin32Error());
+    var descriptor=new RawSecurityDescriptor(bytes,0);
+    descriptor.DiscretionaryAcl.InsertAce(descriptor.DiscretionaryAcl.Count,new CommonAce(AceFlags.None,AceQualifier.AccessAllowed,mask,sid,false,null));
+    bytes=new byte[descriptor.BinaryLength]; descriptor.GetBinaryForm(bytes,0);
+    if(!SetUserObjectSecurity(handle,ref info,bytes))throw new Win32Exception(Marshal.GetLastWin32Error());
+  }
   [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]
   struct StartupInfo {
     public int cb; public string reserved,desktop,title;
@@ -29,6 +55,13 @@ public static class StandardUserSmoke {
     var profile=Environment.GetEnvironmentVariable("ANDERSTORE_SMOKE_PROFILE");
     var username=Environment.GetEnvironmentVariable("ANDERSTORE_SMOKE_USERNAME");
     var password=Environment.GetEnvironmentVariable("ANDERSTORE_SMOKE_PASSWORD");
+    // CreateProcessWithLogonW requires desktop permission for the test account.
+    // This modifies only the disposable runner's desktop, never a user's PC.
+    var sid=(SecurityIdentifier)new NTAccount(Environment.MachineName,username).Translate(typeof(SecurityIdentifier));
+    var station=OpenWindowStation("winsta0",false,0x60000);
+    var desktop=OpenDesktop("default",0,false,0x60000);
+    try { GrantDesktopAccess(station,sid,0xf037f); GrantDesktopAccess(desktop,sid,0xf01ff); }
+    finally { if(station!=IntPtr.Zero)CloseWindowStation(station); if(desktop!=IntPtr.Zero)CloseDesktop(desktop); }
     values["USERNAME"]=username; values["USERPROFILE"]=profile;
     values["APPDATA"]=profile+"\\AppData\\Roaming"; values["LOCALAPPDATA"]=profile+"\\AppData\\Local";
     values["TEMP"]=profile+"\\AppData\\Local\\Temp"; values["TMP"]=values["TEMP"];
