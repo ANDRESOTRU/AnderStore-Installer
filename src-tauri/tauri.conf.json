@@ -25,7 +25,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwRDc0NjBERkEzN0U1MzYKUldRMjVUZjZEVWJYNFA0eWtoOGRyRFBtc3BnN20zWFpzbmVNaiswVmhlNm9GUzFzTjRPYmxSaHIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY0QUFBMkYxRTQ1MUQxMgpSV1FTSFVVZUw2cEtEMUFXYUVqb2VuVnRhRC9RMU96akZyTGR5MXNXOWN0cGRpZU1EYmltYWRDQwo=",
       "endpoints": [
         "https://github.com/ANDRESOTRU/AnderStore-Installer/releases/latest/download/latest.json"
       ]

@@ -53,7 +53,7 @@ jobs:
         with:
           tagName: v${{ steps.version.outputs.version }}
           releaseName: AnderStore Installer v${{ steps.version.outputs.version }}
-          releaseBody: "Понятные инструкции Apple ID и встроенное обновление установщика."
+          releaseBody: "Понятные инструкции Apple ID и встроенное обновление установщика. Для перехода с 2.3.6 и более старых версий один раз установите новый EXE вручную: с 2.3.7 используется собственный ключ подписи AnderStore."
           releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true
@@ -70,8 +70,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Could not download draft release artifacts" }
           node scripts/validate-updater.mjs out "${{ steps.version.outputs.version }}" "${{ github.repository }}"
           if ($LASTEXITCODE -ne 0) { throw "Updater validation failed; release remains a draft" }
-          $installer = Get-ChildItem out -Filter *.exe | Select-Object -First 1
-          Copy-Item -LiteralPath $installer.FullName -Destination out/AnderStore-Installer-Setup.exe
+          $manifest = Get-Content -Raw out/latest.json | ConvertFrom-Json
+          $installerName = [System.Uri]::UnescapeDataString(([System.Uri]$manifest.platforms.'windows-x86_64'.url).Segments[-1])
+          Copy-Item -LiteralPath (Join-Path out $installerName) -Destination out/AnderStore-Installer-Setup.exe
           gh release upload $tag out/AnderStore-Installer-Setup.exe --clobber
           if ($LASTEXITCODE -ne 0) { throw "Could not upload download-page installer" }
       - name: Upload verified installer artifact
