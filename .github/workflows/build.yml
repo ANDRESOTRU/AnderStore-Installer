@@ -70,8 +70,18 @@ jobs:
           $tag = "v${{ steps.version.outputs.version }}"
           gh release download $tag --dir out
           if ($LASTEXITCODE -ne 0) { throw "Could not download draft release artifacts" }
+          gh release view $tag --json assets | Set-Content -Encoding utf8 out/release-assets.json
+          if ($LASTEXITCODE -ne 0) { throw "Could not read draft asset inventory" }
+          node scripts/prepare-updater.mjs out "${{ steps.version.outputs.version }}" "${{ github.repository }}"
+          if ($LASTEXITCODE -ne 0) { throw "Could not prepare public updater URLs" }
           node scripts/validate-updater.mjs out "${{ steps.version.outputs.version }}" "${{ github.repository }}"
           if ($LASTEXITCODE -ne 0) { throw "Updater validation failed; release remains a draft" }
+          gh release upload $tag out/latest.json --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not upload public updater manifest" }
+          gh release download $tag --pattern latest.json --dir out --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not confirm uploaded updater manifest" }
+          node scripts/validate-updater.mjs out "${{ steps.version.outputs.version }}" "${{ github.repository }}"
+          if ($LASTEXITCODE -ne 0) { throw "Uploaded updater validation failed" }
           $manifest = Get-Content -Raw out/latest.json | ConvertFrom-Json
           $installerName = [System.Uri]::UnescapeDataString(([System.Uri]$manifest.platforms.'windows-x86_64'.url).Segments[-1])
           Copy-Item -LiteralPath (Join-Path out $installerName) -Destination out/AnderStore-Installer-Setup.exe

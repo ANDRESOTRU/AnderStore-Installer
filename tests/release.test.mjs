@@ -6,6 +6,21 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { validateManifest, verifySignature, validateRelease } from "../scripts/validate-updater.mjs";
+import { prepareManifest } from "../scripts/prepare-updater.mjs";
+
+test("draft API URLs become public versioned URLs only for this release's uploaded installer", () => {
+  const apiUrl = "https://api.github.com/repos/ANDRESOTRU/AnderStore-Installer/releases/assets/123";
+  const manifest = { version: "2.3.8", platforms: { "windows-x86_64": { url: apiUrl, signature: "sig" }, "windows-x86_64-nsis": { url: apiUrl, signature: "sig" } } };
+  const assets = [{ apiUrl, name: "AnderStore.Installer_2.3.8_x64-setup.exe", state: "uploaded" }];
+  const prepared = prepareManifest(manifest, assets, "2.3.8", "ANDRESOTRU/AnderStore-Installer");
+  assert.equal(prepared.platforms["windows-x86_64"].url, "https://github.com/ANDRESOTRU/AnderStore-Installer/releases/download/v2.3.8/AnderStore.Installer_2.3.8_x64-setup.exe");
+  assert.equal(manifest.platforms["windows-x86_64"].url, apiUrl);
+  assert.throws(() => prepareManifest(manifest, [], "2.3.8", "ANDRESOTRU/AnderStore-Installer"));
+  assert.throws(() => prepareManifest(manifest, [{ ...assets[0], name: "../bad.exe" }], "2.3.8", "ANDRESOTRU/AnderStore-Installer"));
+  assert.throws(() => prepareManifest(manifest, [{ ...assets[0], state: "new" }], "2.3.8", "ANDRESOTRU/AnderStore-Installer"));
+  prepared.platforms["windows-x86_64-nsis"].signature = "different";
+  assert.throws(() => validateManifest(prepared, "2.3.8", "ANDRESOTRU/AnderStore-Installer"));
+});
 
 const fixture = (algorithm = "ED") => {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");

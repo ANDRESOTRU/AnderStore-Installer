@@ -34,6 +34,10 @@ export function validateManifest(manifest, version, repository) {
   if (manifest.version !== version) throw new Error("Updater version does not match release");
   const platform = manifest.platforms?.["windows-x86_64"];
   if (!platform?.signature || !platform?.url) throw new Error("Missing Windows x64 updater");
+  const nsis = manifest.platforms["windows-x86_64-nsis"];
+  if (nsis && (nsis.url !== platform.url || nsis.signature !== platform.signature)) {
+    throw new Error("Windows NSIS updater must match the verified Windows installer");
+  }
   const url = new URL(platform.url);
   const prefix = `/${repository}/releases/download/v${version}/`;
   const name = decodeURIComponent(url.pathname.slice(prefix.length));
