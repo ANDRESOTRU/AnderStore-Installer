@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync, existsSync, cpSync } from "node:fs";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { verifySignature } from "./validate-updater.mjs";
 
 // Runs on an isolated Windows CI runner. CDP observes the real installed WebView;
@@ -39,33 +40,38 @@ const installer = Buffer.from(await (await get(oldPlatform.url)).arrayBuffer());
 verifySignature(installer, oldPlatform.signature, config.plugins.updater.pubkey);
 const setupPath = join(output, "baseline-setup.exe");
 writeFileSync(setupPath, installer);
-const installationDirectory = join(process.env.LOCALAPPDATA, "anderstore-updater-smoke");
+const testUsername = "AnderStoreTest";
+const testProfile = join(process.env.SYSTEMDRIVE + "\\Users", testUsername);
+const testEnvironment = { ...process.env,
+  ANDERSTORE_SMOKE_USERNAME: testUsername,
+  ANDERSTORE_SMOKE_PASSWORD: "A!1" + randomBytes(32).toString("hex"),
+  ANDERSTORE_SMOKE_PROFILE: testProfile,
+  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--remote-debugging-port=19227",
+};
+const account = spawnSync("powershell.exe", ["-NoProfile", "-Command", "$secret = ConvertTo-SecureString $env:ANDERSTORE_SMOKE_PASSWORD -AsPlainText -Force; New-LocalUser -Name $env:ANDERSTORE_SMOKE_USERNAME -Password $secret -PasswordNeverExpires -ErrorAction Stop | Out-Null; Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $env:ANDERSTORE_SMOKE_USERNAME -ErrorAction Stop"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
+assert.equal(account.status, 0, `Create isolated ordinary test user: ${account.stderr}`);
+const launcher = "scripts/launch-standard-user-smoke.ps1";
+const profileSetup = spawnSync("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.env.WINDIR, "System32", "cmd.exe"), "-Arguments", "/d /c exit 0", "-Wait"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
+assert.equal(profileSetup.status, 0, `Initialize test profile: ${profileSetup.stderr}`);
+const installationDirectory = join(testProfile, "AppData", "Local", "anderstore-updater-smoke");
 assert.ok(!/\s/.test(installationDirectory), "CI installation directory must be unambiguous for runas");
-const install = spawnSync(setupPath, ["/S", `/D=${installationDirectory}`], { timeout: 180000, windowsHide: true });
+const install = spawnSync("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.cwd(), setupPath), "-Arguments", `/S /D=${installationDirectory}`, "-Wait"], { timeout: 180000, windowsHide: true, encoding: "utf8", env: testEnvironment });
 assert.equal(install.status, 0, "Baseline NSIS installation must succeed");
 const executable = join(installationDirectory, "anderstore-installer.exe");
 assert.ok(existsSync(executable), "Test must run the installed app");
 console.log(`Installed baseline executable: ${executable}`);
-const preferencesPath = join(process.env.APPDATA, "uk.andresot.anderstore.installer", "preferences.json");
-mkdirSync(join(process.env.APPDATA, "uk.andresot.anderstore.installer"), { recursive: true });
+const appData = join(testProfile, "AppData", "Roaming", "uk.andresot.anderstore.installer");
+const preferencesPath = join(appData, "preferences.json");
+mkdirSync(appData, { recursive: true });
 const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
   deviceId: `ci-test-${n}`, deviceName: `CI Test iPhone ${n}`, iosVersion: "18.0",
   appleId: `ci-account-${n}@example.com`, installedAt: "2026-09-27T00:00:00.000Z",
 }]));
 writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }));
 const port = 19227;
-const testEnvironment = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` };
-// NSIS restarts through the user's desktop shell. A hosted CI session may not
-// have Explorer running; start the standard shell with the same normal token.
-const desktop = spawnSync("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", join(process.env.WINDIR, "explorer.exe")], {
-  encoding: "utf8", env: testEnvironment, timeout: 30000,
-});
-console.log(desktop.stdout);
-assert.equal(desktop.status, 0, `Desktop setup failed: ${desktop.stderr}`);
-await pause(3000);
-// GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
-// current WebView2 runtimes do not expose CDP from an elevated host.
-const app = spawn("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", executable], { stdio: "inherit", env: testEnvironment });
+// Use an actual standard account: hosted runners disable UAC and synthetic
+// restricted administrator tokens do not behave like a normal installer user.
+const app = spawn("powershell.exe", ["-NoProfile", "-File", launcher, "-Executable", executable], { stdio: "inherit", env: testEnvironment });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
 let launchFailure;
 app.on("exit", (code, signal) => {
@@ -172,6 +178,6 @@ try {
   client?.close();
   const diagnostic = spawnSync("powershell.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
   writeFileSync(join(output, "processes.json"), diagnostic.stdout);
-  const logs = join(process.env.APPDATA, "uk.andresot.anderstore.installer", "logs");
+  const logs = join(appData, "logs");
   if (existsSync(logs)) cpSync(logs, join(output, "app-logs"), { recursive: true });
 }
