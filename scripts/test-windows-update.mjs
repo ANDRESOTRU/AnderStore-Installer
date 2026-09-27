@@ -55,6 +55,14 @@ assert.equal(account.status, 0, `Create isolated ordinary test user: ${account.s
 const launcher = "scripts/launch-standard-user-smoke.ps1";
 const profileSetup = spawnSync("pwsh.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.env.WINDIR, "System32", "cmd.exe"), "-Arguments", "/d /c exit 0", "-Wait"], { encoding: "utf8", windowsHide: true, env: testEnvironment });
 assert.equal(profileSetup.status, 0, `Initialize test profile: ${profileSetup.stderr}`);
+mkdirSync(join(testProfile, "AppData", "Local", "Temp"), { recursive: true });
+// Hosted runners may register WebView2 only for runneradmin. Resolve the
+// installed machine runtime explicitly for the isolated ordinary account.
+const runtime = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "Get-ChildItem -LiteralPath \"${env:ProgramFiles(x86)}\\Microsoft\\EdgeWebView\\Application\" -Filter msedgewebview2.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty DirectoryName"], { encoding: "utf8", windowsHide: true });
+if (runtime.status === 0 && runtime.stdout.trim()) {
+  testEnvironment.WEBVIEW2_BROWSER_EXECUTABLE_FOLDER = runtime.stdout.trim();
+  console.log(`Machine WebView2 runtime: ${runtime.stdout.trim()}`);
+}
 const installationDirectory = join(testProfile, "AppData", "Local", "anderstore-updater-smoke");
 assert.ok(!/\s/.test(installationDirectory), "CI installation directory must be unambiguous for runas");
 const install = spawnSync("pwsh.exe", ["-NoProfile", "-File", launcher, "-Executable", join(process.cwd(), setupPath), "-Arguments", `/S /D=${installationDirectory}`, "-Wait"], { timeout: 180000, windowsHide: true, encoding: "utf8", env: testEnvironment });
@@ -178,7 +186,7 @@ try {
   console.log(`PASS: ${baseline} → ${expected}; native signed update, automatic restart, and both saved guides verified.`);
 } finally {
   client?.close();
-  const diagnostic = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
+  const diagnostic = spawnSync("pwsh.exe", ["-NoProfile", "-Command", "Get-Process | Where-Object { $_.ProcessName -match 'anderstore|msedgewebview' } | Select-Object ProcessName,Id,Path,SessionId,MainWindowTitle | ConvertTo-Json"], { encoding: "utf8", windowsHide: true });
   writeFileSync(join(output, "processes.json"), diagnostic.stdout);
   const logs = join(appData, "logs");
   if (existsSync(logs)) cpSync(logs, join(output, "app-logs"), { recursive: true });
