@@ -65,6 +65,10 @@ cargo test --locked
 
 **Real Windows verification:** run **Verify real Windows self-update** in Actions after publishing a signed version. This exercises the released 2.3.7 installer, the actual in-app update button, native signature validation, NSIS installation, automatic restart and two saved device guides under a disposable standard Windows account. Inspect the `windows-self-update-evidence` artifact; mocked API tests alone do not confirm self-update.
 
+**Статус проверки 2.3.8:** сборка, 18 тестов интерфейса/публикации и 9 Rust-тестов пройдены. Выпуск подписан и опубликован, а установленный EXE на пользовательском ПК имеет версию 2.3.8. На облачной Windows подтверждены настоящая кнопка обновления, загрузка, проверка подписи и установка 2.3.7 → 2.3.8. Полный сценарий с автоматическим перезапуском и сохранением памяток ещё не подтверждён: административный стенд не показал перезапуск, а WebView не запустился под отдельным обычным пользователем. До успешного полного сценария встроенное обновление нельзя считать окончательно проверенным.
+
+**2.3.8 verification status:** signed publication, frontend build, 18 frontend/release tests and 9 Rust tests passed. The real Windows updater downloaded, verified and installed 2.3.8 over 2.3.7. Automatic restart and guide preservation across that restart remain unverified because of hosted Windows desktop/WebView limitations; a successful full smoke run is still required.
+
 ## Лицензия
 
 Код распространяется по лицензии **MIT** — см. файл [LICENSE](LICENSE).
