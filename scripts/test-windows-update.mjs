@@ -39,7 +39,7 @@ const installer = Buffer.from(await (await get(oldPlatform.url)).arrayBuffer());
 verifySignature(installer, oldPlatform.signature, config.plugins.updater.pubkey);
 const setupPath = join(output, "baseline-setup.exe");
 writeFileSync(setupPath, installer);
-const installationDirectory = join(process.env.RUNNER_TEMP, "anderstore-updater-smoke");
+const installationDirectory = join(process.env.LOCALAPPDATA, "anderstore-updater-smoke");
 assert.ok(!/\s/.test(installationDirectory), "CI installation directory must be unambiguous for runas");
 const install = spawnSync(setupPath, ["/S", `/D=${installationDirectory}`], { timeout: 180000, windowsHide: true });
 assert.equal(install.status, 0, "Baseline NSIS installation must succeed");
