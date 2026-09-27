@@ -37,10 +37,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Version check failed" }
           $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
           $tag = "v$version"
-          $existing = gh release view $tag --json isDraft | ConvertFrom-Json
+          $existing = gh release view $tag --json isDraft 2>$null | ConvertFrom-Json
           if ($LASTEXITCODE -eq 0 -and -not $existing.isDraft) {
             throw "Version $version is already published. Bump all project versions before releasing."
           }
+          # A missing release is expected for a new version; do not let its exit code fail this step.
+          $global:LASTEXITCODE = 0
           "version=$version" >> $env:GITHUB_OUTPUT
       - name: Test frontend behavior
         run: bun run test
