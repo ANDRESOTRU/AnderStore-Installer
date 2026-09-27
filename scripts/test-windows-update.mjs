@@ -14,12 +14,12 @@ mkdirSync(output, { recursive: true });
 const config = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
 const base = "https://github.com/ANDRESOTRU/AnderStore-Installer/releases";
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-async function until(task, label, timeout = 120000) {
+async function until(task, label, timeout = 120000, interval = 500) {
   const deadline = Date.now() + timeout;
   let last;
   while (Date.now() < deadline) {
     try { const result = await task(); if (result) return result; } catch (error) { last = error; }
-    await pause(500);
+    await pause(interval);
   }
   throw new Error(`Timed out: ${label}. ${last ?? ""}`);
 }
@@ -28,7 +28,10 @@ async function get(url) {
   if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
   return response;
 }
-const latest = await (await get(`${base}/latest/download/latest.json`)).json();
+const latest = await until(async () => {
+  const manifest = await (await get(`${base}/latest/download/latest.json`)).json();
+  return manifest.version === expected ? manifest : undefined;
+}, "published signed release", 600000, 10000);
 assert.equal(latest.version, expected, "Test must exercise the expected published release");
 const oldManifest = await (await get(`${base}/download/v${baseline}/latest.json`)).json();
 const oldPlatform = oldManifest.platforms["windows-x86_64"];

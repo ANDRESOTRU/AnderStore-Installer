@@ -10,7 +10,7 @@ on:
 jobs:
   installed-update:
     runs-on: windows-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
