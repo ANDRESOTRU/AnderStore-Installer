@@ -54,11 +54,18 @@ const receipts = Object.fromEntries([1, 2].map((n) => [`ci-test-${n}`, {
 }]));
 writeFileSync(preferencesPath, JSON.stringify({ installationReceipts: receipts }));
 const port = 19227;
+const testEnvironment = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` };
+// NSIS restarts through the user's desktop shell. A hosted CI session may not
+// have Explorer running; start the standard shell with the same normal token.
+const desktop = spawnSync("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", join(process.env.WINDIR, "explorer.exe")], {
+  encoding: "utf8", env: testEnvironment, timeout: 30000,
+});
+console.log(desktop.stdout);
+assert.equal(desktop.status, 0, `Desktop setup failed: ${desktop.stderr}`);
+await pause(3000);
 // GitHub's runner is elevated. Exercise the per-user app with a normal-user token;
 // current WebView2 runtimes do not expose CDP from an elevated host.
-const app = spawn("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", executable], { stdio: "inherit", env: {
-  ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
-} });
+const app = spawn("powershell.exe", ["-NoProfile", "-File", "scripts/launch-smoke-app.ps1", executable], { stdio: "inherit", env: testEnvironment });
 app.on("error", (error) => console.log(`Baseline launch failed: ${error}`));
 let launchFailure;
 app.on("exit", (code, signal) => {

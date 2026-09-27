@@ -8,6 +8,9 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 public static class SmokeLauncher {
+  [DllImport("user32.dll")]
+  static extern IntPtr GetShellWindow();
+  public static bool ShellAvailable() { return GetShellWindow()!=IntPtr.Zero; }
   [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
   struct StartupInfo {
     public int cb; public string reserved, desktop, title;
@@ -59,4 +62,5 @@ public static class SmokeLauncher {
 }
 '@
 $resolvedExecutable = (Resolve-Path -LiteralPath $Executable).Path
+Write-Output "Desktop shell available: $([SmokeLauncher]::ShellAvailable())"
 Write-Output "Baseline test process: $([SmokeLauncher]::Launch($resolvedExecutable))"
