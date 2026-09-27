@@ -8,7 +8,9 @@ import { verifySignature } from "./validate-updater.mjs";
 // Runs on an isolated Windows CI runner. CDP observes the real installed WebView;
 // updater IPC, signature verification, NSIS installation and restart are not mocked.
 assert.equal(process.platform, "win32");
+assert.equal(process.env.GITHUB_ACTIONS, "true", "Run only on a disposable GitHub Actions Windows runner");
 const expected = process.argv[2] ?? "2.3.8";
+assert.match(expected, /^\d+\.\d+\.\d+$/, "Expected release must be a stable version");
 const baseline = "2.3.7";
 const output = "out/windows-update-smoke";
 mkdirSync(output, { recursive: true });
